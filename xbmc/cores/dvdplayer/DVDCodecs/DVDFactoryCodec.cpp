@@ -74,11 +74,12 @@ CDVDVideoCodec* CDVDFactoryCodec::OpenCodec(CDVDVideoCodec* pCodec, CDVDStreamIn
   return NULL;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options )
+CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options, bool bAudio2 /* = false */ )
 {
   try
   {
     CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opening", pCodec->GetName());
+    pCodec->SetAudio2(bAudio2);
     if( pCodec->Open( hints, options ) )
     {
       CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opened", pCodec->GetName());
@@ -258,14 +259,14 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, unsigne
   return NULL;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool passthrough /* = true */)
+CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool passthrough /* = true */, bool bAudio2 /* = false */)
 {
   CDVDAudioCodec* pCodec = NULL;
   CDVDCodecOptions options;
 
   if (passthrough)
   {
-    pCodec = OpenCodec( new CDVDAudioCodecPassthroughFFmpeg(), hint, options);
+    pCodec = OpenCodec( new CDVDAudioCodecPassthroughFFmpeg(), hint, options, bAudio2);
     if ( pCodec ) return pCodec;
   }
 
@@ -274,7 +275,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   case CODEC_ID_MP2:
   case CODEC_ID_MP3:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecLibMad(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecLibMad(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -296,7 +297,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   case CODEC_ID_PCM_ALAW:
   case CODEC_ID_PCM_MULAW:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecPcm(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecPcm(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -305,7 +306,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   //case CODEC_ID_LPCM_S20BE:
   case CODEC_ID_LPCM_S24BE:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecLPcm(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecLPcm(), hint, options, bAudio2);
       if( pCodec ) return pCodec;
       break;
     }
@@ -317,7 +318,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
     }
   }
 
-  pCodec = OpenCodec( new CDVDAudioCodecFFmpeg(), hint, options );
+  pCodec = OpenCodec( new CDVDAudioCodecFFmpeg(), hint, options, bAudio2 );
   if( pCodec ) return pCodec;
 
   return NULL;

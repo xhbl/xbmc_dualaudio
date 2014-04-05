@@ -26,7 +26,7 @@
 class IDVDAudioEncoder
 {
 public:
-  IDVDAudioEncoder() {};
+  IDVDAudioEncoder() {m_bAudio2 = false;};
   virtual ~IDVDAudioEncoder() {};
   virtual bool Initialize(unsigned int channels, enum PCMChannels *channelMap, unsigned int bitsPerSample, unsigned int sampleRate) = 0;
   virtual void Reset() = 0;
@@ -39,5 +39,11 @@ public:
   /* add/get packets to/from the DSP */
   virtual int Encode (uint8_t *data, int size) = 0;
   virtual int GetData(uint8_t **data) = 0;
+
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; };
+
+protected:
+
+  bool m_bAudio2;
 };
 

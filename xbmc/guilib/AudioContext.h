@@ -41,6 +41,7 @@ class CAudioContext
 {
 public:
   CAudioContext();
+  CAudioContext(bool bAudio2);
   virtual ~CAudioContext();
 
   void                        SetActiveDevice(int iDevice);
@@ -71,6 +72,9 @@ protected:
   int                          m_iDevice;
   CStdString                   m_strDevice;
   bool                         m_bAC3EncoderActive;
+
+  bool                         m_bAudio2;
 };
 
 extern CAudioContext g_audioContext;
+extern CAudioContext g_audioContext2;

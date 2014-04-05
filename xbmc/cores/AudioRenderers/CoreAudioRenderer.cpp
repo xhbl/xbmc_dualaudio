@@ -667,6 +667,42 @@ CCoreAudioRenderer::CCoreAudioRenderer() :
   g_Windowing.Register(this);
 }
 
+CCoreAudioRenderer::CCoreAudioRenderer(bool bAudio2) :
+  m_Pause(false),
+  m_ChunkLen(0),
+  m_MaxCacheLen(0),
+  m_AvgBytesPerSec(0),
+  m_CurrentVolume(0),
+  m_Initialized(false),
+  m_Passthrough(false),
+  m_EnableVolumeControl(true),
+  m_OutputBufferIndex(0),
+  m_pCache(NULL),
+  m_DoRunout(0)
+{
+  SInt32 major,  minor;
+  Gestalt(gestaltSystemVersionMajor, &major);
+  Gestalt(gestaltSystemVersionMinor, &minor);
+  
+  // By default, kAudioHardwarePropertyRunLoop points at the process's main thread on SnowLeopard,
+  // If your process lacks such a run loop, you can set kAudioHardwarePropertyRunLoop to NULL which
+  // tells the HAL to run it's own thread for notifications (which was the default prior to SnowLeopard).
+  // So tell the HAL to use its own thread for similar behavior under all supported versions of OSX.
+  if (major == 10 && minor >=6)
+  {
+    CFRunLoopRef theRunLoop = NULL;
+    AudioObjectPropertyAddress theAddress = { kAudioHardwarePropertyRunLoop, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMaster };
+    OSStatus theError = AudioObjectSetPropertyData(kAudioObjectSystemObject, &theAddress, 0, NULL, sizeof(CFRunLoopRef), &theRunLoop);
+    if (theError != noErr)
+    {
+      CLog::Log(LOGERROR, "CoreAudioRenderer::constructor: kAudioHardwarePropertyRunLoop error.");
+    }
+  }
+
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
+
 CCoreAudioRenderer::~CCoreAudioRenderer()
 {
 #ifdef VERBOSE_DEBUG
@@ -721,15 +757,29 @@ bool CCoreAudioRenderer::Initialize(IAudioCallback* pCallback, const CStdString&
   // (e.g. if we crashed last time leaving it stuck in AC3/DTS/SPDIF mode)
   Cocoa_ResetAudioDevices();
 
-  if(m_init_state.bPassthrough)
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+  if (!m_bAudio2)
+  {
+    if(m_init_state.bPassthrough)
+      g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+    else
+      g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  }
   else
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  {
+    if(m_init_state.bPassthrough)
+      g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+    else
+      g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  }
   
   // TODO: If debugging, output information about all devices/streams
   
   // Attempt to find the configured output device
-  AudioDeviceID outputDevice = CCoreAudioHardware::FindAudioDevice(g_guiSettings.GetString("audiooutput.audiodevice"));
+  AudioDeviceID outputDevice;
+  if (!m_bAudio2)
+    outputDevice = CCoreAudioHardware::FindAudioDevice(g_guiSettings.GetString("audiooutput.audiodevice"));
+  else
+    outputDevice = CCoreAudioHardware::FindAudioDevice(g_guiSettings.GetString("audiooutput2.audiodevice"));
   // Fall back to the default device if no match is found
   if (!outputDevice)
   {
@@ -894,9 +944,18 @@ bool CCoreAudioRenderer::Deinitialize()
   m_DoRunout = 0;
   m_EnableVolumeControl = true;
   
-  // do not diddle with active device if we are re-init'ing
-  if (!m_init_state.reinit)
-    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  if (!m_bAudio2)
+  {
+    // do not diddle with active device if we are re-init'ing
+    if (!m_init_state.reinit)
+      g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  }
+  else
+  {
+    // do not diddle with active device if we are re-init'ing
+    if (!m_init_state.reinit)
+      g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  }
   
   CLog::Log(LOGINFO, "CoreAudioRenderer::Deinitialize: Renderer has been shut down.");
   

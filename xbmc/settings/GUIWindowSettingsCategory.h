@@ -64,7 +64,7 @@ protected:
   void FillInNetworkInterfaces(CSetting *pSetting, float groupWidth, int &iControlID);
   void NetworkInterfaceChanged(void);
 
-  void FillInAudioDevices(CSetting* pSetting, bool Passthrough = false);
+  void FillInAudioDevices(CSetting* pSetting, bool Passthrough = false, bool bAudio2 = false);
 
   virtual void SetupControls();
   CGUIControl* AddIntBasedSpinControl(CSetting *pSetting, float groupWidth, int &iControlID);

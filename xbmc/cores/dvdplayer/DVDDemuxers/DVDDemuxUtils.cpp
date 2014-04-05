@@ -95,3 +95,21 @@ DemuxPacket* CDVDDemuxUtils::AllocateDemuxPacket(int iDataSize)
   }
   return pPacket;
 }
+
+DemuxPacket* CDVDDemuxUtils::DuplicateDemuxPacket(DemuxPacket* pPacket)
+{
+  if (NULL ==pPacket || pPacket->iSize <= 0)
+    return NULL;
+  DemuxPacket* pPacketDup = AllocateDemuxPacket( pPacket->iSize );
+  if( pPacketDup )
+  {
+    memcpy(pPacketDup->pData, pPacket->pData, pPacket->iSize);
+    pPacketDup->iSize = pPacket->iSize;
+    pPacketDup->iStreamId = pPacket->iStreamId;
+    pPacketDup->iGroupId = pPacket->iGroupId;
+    pPacketDup->pts = pPacket->pts;
+    pPacketDup->dts = pPacket->dts;
+    pPacketDup->duration = pPacket->duration;
+  }
+  return pPacketDup;
+}

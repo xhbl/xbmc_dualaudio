@@ -32,6 +32,7 @@ class CIOSAudioRenderer : public IAudioRenderer
   {
   public:
     CIOSAudioRenderer();
+    CIOSAudioRenderer(bool bAudio2);
     virtual ~CIOSAudioRenderer();
     virtual unsigned int GetChunkLen();
     virtual float GetDelay();

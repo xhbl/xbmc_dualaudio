@@ -103,6 +103,7 @@ protected:
   int                m_inStride, m_outStride;
   struct PCMMapInfo  m_lookupMap[PCM_MAX_CH + 1][PCM_MAX_CH + 1];
   int                m_counts[PCM_MAX_CH];
+  bool               m_bAudio2;
 
   float*             m_buf;
   int                m_bufsize;
@@ -142,6 +143,7 @@ public:
   int  FramesToOutBytes(int frames);
   int  FramesToInBytes (int frames);
   float GetCurrentAttenuation() { return m_attenuationMin; }
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; };
 };
 
 #endif

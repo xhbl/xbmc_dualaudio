@@ -58,6 +58,21 @@ CAudioContext::CAudioContext()
 #endif
   m_pDirectSoundDevice=NULL;
 #endif
+  m_bAudio2 = false;
+}
+
+CAudioContext::CAudioContext(bool bAudio2)
+{
+  m_bAC3EncoderActive=false;
+  m_iDevice=DEFAULT_DEVICE;
+  m_strDevice.clear();
+#ifdef HAS_AUDIO
+#ifdef HAS_AUDIO_PASS_THROUGH
+  m_pAC97Device=NULL;
+#endif
+  m_pDirectSoundDevice=NULL;
+#endif
+  m_bAudio2 = bAudio2;
 }
 
 CAudioContext::~CAudioContext()
@@ -67,7 +82,15 @@ CAudioContext::~CAudioContext()
 // \brief Create a new device by type (DEFAULT_DEVICE, DIRECTSOUND_DEVICE, AC97_DEVICE)
 void CAudioContext::SetActiveDevice(int iDevice)
 {
-  CStdString strAudioDev = g_guiSettings.GetString("audiooutput.audiodevice");
+  CStdString strAudioDev;
+  if(!m_bAudio2)
+  {
+    strAudioDev = g_guiSettings.GetString("audiooutput.audiodevice");
+  }
+  else
+  {
+    strAudioDev = g_guiSettings.GetString("audiooutput2.audiodevice");
+  }
 
   /* if device is the same, no need to bother */
 #ifdef _WIN32
@@ -181,7 +204,10 @@ void CAudioContext::SetActiveDevice(int iDevice)
     return;
   }
 #endif
-  g_audioManager.Initialize(m_iDevice);
+  if (!m_bAudio2)
+  {
+    g_audioManager.Initialize(m_iDevice);
+  }
 }
 
 // \brief Return the active device type (NONE, DEFAULT_DEVICE, DIRECTSOUND_DEVICE, AC97_DEVICE)
@@ -194,7 +220,10 @@ int CAudioContext::GetActiveDevice()
 void CAudioContext::RemoveActiveDevice()
 {
   CLog::Log(LOGDEBUG, "%s - Removing device %i", __FUNCTION__, m_iDevice);
-  g_audioManager.DeInitialize(m_iDevice);
+  if (!m_bAudio2)
+  {
+    g_audioManager.DeInitialize(m_iDevice);
+  }
   m_iDevice=NONE;
 
 #ifdef HAS_AUDIO
@@ -214,7 +243,16 @@ void CAudioContext::SetupSpeakerConfig(int iChannels, bool& bAudioOnAllSpeakers,
 #ifdef HAS_AUDIO
   return; //not implemented
   DWORD spconfig = DSSPEAKER_USE_DEFAULT;
-  if (AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput.mode")))
+  bool bBitStream;
+  if (!m_bAudio2)
+  {
+    bBitStream = AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput.mode"));
+  }
+  else
+  {
+    bBitStream = AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput2.mode"));
+  }
+  if (bBitStream)
   {
     if (g_settings.m_currentVideoSettings.m_OutputToAllSpeakers && !bIsMusic)
     {

@@ -164,7 +164,7 @@ void CPlayerCoreFactory::GetPlayers( const CFileItem& item, VECPLAYERCORES &vecC
 
     if (bAdd)
     {
-      if( g_guiSettings.GetInt("audiooutput.mode") == AUDIO_ANALOG )
+      if( g_guiSettings.GetInt("audiooutput.mode") == AUDIO_ANALOG && !AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput2.mode")) )
       {
         CLog::Log(LOGDEBUG, "CPlayerCoreFactory::GetPlayers: adding PAPlayer (%d)", EPC_PAPLAYER);
         vecCores.push_back(EPC_PAPLAYER);

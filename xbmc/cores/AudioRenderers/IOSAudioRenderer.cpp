@@ -45,6 +45,23 @@ CIOSAudioRenderer::CIOSAudioRenderer() :
   m_Buffer = new IOSAudioRingBuffer();
 }
 
+CIOSAudioRenderer::CIOSAudioRenderer(bool bAudio2) :
+  m_Pause(false),
+  m_Initialized(false),
+  m_CurrentVolume(0),
+  m_OutputBufferIndex(0),
+  m_BytesPerSec(0),
+  m_NumChunks(0),
+  m_PacketSize(0),
+  m_Passthrough(false),
+  m_SamplesPerSec(0),
+  m_DoRunout(0)
+{
+  m_Buffer = new IOSAudioRingBuffer();
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
+
 CIOSAudioRenderer::~CIOSAudioRenderer()
 {
   Deinitialize();
@@ -63,18 +80,33 @@ bool CIOSAudioRenderer::Initialize(IAudioCallback* pCallback, const CStdString& 
 
   m_Passthrough = bPassthrough;
 
-  g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  if (!m_bAudio2)
+    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  else
+    g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
 
   bool bAudioOnAllSpeakers(false);
-  g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
-
-  if(bPassthrough)
+  if (!m_bAudio2)
   {
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
-  } else {
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
-  }
+    g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
 
+    if(bPassthrough)
+    {
+      g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+    } else {
+      g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+    }
+  }
+  else
+  {
+    g_audioContext2.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+
+    if(bPassthrough) {
+      g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+    } else {
+      g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+    }
+  }
   m_DataChannels = iChannels;
   m_remap.Reset();
 

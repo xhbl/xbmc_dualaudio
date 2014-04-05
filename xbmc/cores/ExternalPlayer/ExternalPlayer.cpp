@@ -250,6 +250,13 @@ void CExternalPlayer::Process()
     g_audioContext.SetActiveDevice(CAudioContext::NONE);
   }
 
+  int iActiveDevice2 = g_audioContext2.GetActiveDevice();
+  if (iActiveDevice2 != CAudioContext::NONE)
+  {
+    CLog::Log(LOGNOTICE, "%s: Releasing 2nd audio device %d", __FUNCTION__, iActiveDevice2);
+    g_audioContext2.SetActiveDevice(CAudioContext::NONE);
+  }
+
 #if defined(_WIN32)
   if (m_warpcursor)
   {
@@ -365,6 +372,12 @@ void CExternalPlayer::Process()
   {
     CLog::Log(LOGNOTICE, "%s: Reclaiming audio device %d", __FUNCTION__, iActiveDevice);
     g_audioContext.SetActiveDevice(iActiveDevice);
+  }
+
+  if (iActiveDevice2 != CAudioContext::NONE)
+  {
+    CLog::Log(LOGNOTICE, "%s: Reclaiming 2nd audio device %d", __FUNCTION__, iActiveDevice2);
+    g_audioContext2.SetActiveDevice(iActiveDevice2);
   }
 
   if (!ret || (m_playOneStackItem && g_application.CurrentFileItem().IsStack()))

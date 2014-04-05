@@ -330,6 +330,7 @@ bool CDVDAudioCodecPassthroughFFmpeg::SetupEncoder(CDVDStreamInfo &hints)
 
   /* create and setup the encoder */
   m_Encoder     = new CDVDAudioEncoderFFmpeg();
+  m_Encoder->SetAudio2(m_bAudio2);
   m_InitEncoder = true;
 
   /* adjust the hints according to the encorders output */
@@ -343,17 +344,33 @@ bool CDVDAudioCodecPassthroughFFmpeg::SetupEncoder(CDVDStreamInfo &hints)
 
 bool CDVDAudioCodecPassthroughFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
-  int audioMode = g_guiSettings.GetInt("audiooutput.mode");
+    int audioMode;
+    if (!m_bAudio2)
+      audioMode = g_guiSettings.GetInt("audiooutput.mode");
+    else
+      audioMode = g_guiSettings.GetInt("audiooutput2.mode");
 
   // TODO - move this stuff somewhere else
   if (AUDIO_IS_BITSTREAM(audioMode))
   {
-    m_bSupportsAC3Out = g_guiSettings.GetBool("audiooutput.ac3passthrough");
-    m_bSupportsDTSOut = g_guiSettings.GetBool("audiooutput.dtspassthrough");
-    m_bSupportsAACOut = g_guiSettings.GetBool("audiooutput.passthroughaac");
-    m_bSupportsMP1Out = g_guiSettings.GetBool("audiooutput.passthroughmp1");
-    m_bSupportsMP2Out = g_guiSettings.GetBool("audiooutput.passthroughmp2");
-    m_bSupportsMP3Out = g_guiSettings.GetBool("audiooutput.passthroughmp3");
+    if (!m_bAudio2)
+    {
+      m_bSupportsAC3Out = g_guiSettings.GetBool("audiooutput.ac3passthrough");
+      m_bSupportsDTSOut = g_guiSettings.GetBool("audiooutput.dtspassthrough");
+      m_bSupportsAACOut = g_guiSettings.GetBool("audiooutput.passthroughaac");
+      m_bSupportsMP1Out = g_guiSettings.GetBool("audiooutput.passthroughmp1");
+      m_bSupportsMP2Out = g_guiSettings.GetBool("audiooutput.passthroughmp2");
+      m_bSupportsMP3Out = g_guiSettings.GetBool("audiooutput.passthroughmp3");
+    }
+    else
+    {
+      m_bSupportsAC3Out = g_guiSettings.GetBool("audiooutput2.ac3passthrough");
+      m_bSupportsDTSOut = g_guiSettings.GetBool("audiooutput2.dtspassthrough");
+      m_bSupportsAACOut = g_guiSettings.GetBool("audiooutput2.passthroughaac");
+      m_bSupportsMP1Out = g_guiSettings.GetBool("audiooutput2.passthroughmp1");
+      m_bSupportsMP2Out = g_guiSettings.GetBool("audiooutput2.passthroughmp2");
+      m_bSupportsMP3Out = g_guiSettings.GetBool("audiooutput2.passthroughmp3");
+    }
   }
   else
     return false;

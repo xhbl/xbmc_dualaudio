@@ -97,7 +97,7 @@ public:
   void UnRegisterAudioCallback()                        { m_dvdAudio.UnRegisterAudioCallback(); }
 
   bool OpenStream(CDVDStreamInfo &hints);
-  void OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec);
+  void OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec, CDVDAudioCodec* codec2);
   void CloseStream(bool bWaitForBuffers);
 
   void SetSpeed(int speed);
@@ -112,8 +112,8 @@ public:
   //! codec changes, in which case we may want to switch passthrough on/off.
   bool SwitchCodecIfNeeded();
 
-  void SetVolume(long nVolume)                          { m_dvdAudio.SetVolume(nVolume); }
-  void SetDynamicRangeCompression(long drc)             { m_dvdAudio.SetDynamicRangeCompression(drc); }
+  void SetVolume(long nVolume)                          { m_dvdAudio.SetVolume(nVolume); if(m_bAudio2) m_dvdAudio2.SetVolume(nVolume); }
+  void SetDynamicRangeCompression(long drc)             { m_dvdAudio.SetDynamicRangeCompression(drc); if(m_bAudio2) m_dvdAudio2.SetDynamicRangeCompression(drc); }
   float GetCurrentAttenuation()                         { return m_dvdAudio.GetCurrentAttenuation(); }
 
   std::string GetPlayerInfo();
@@ -137,7 +137,7 @@ protected:
   virtual void OnExit();
   virtual void Process();
 
-  int DecodeFrame(DVDAudioFrame &audioframe, bool bDropPacket);
+  int DecodeFrame(DVDAudioFrame &audioframe, DVDAudioFrame &audioframe2, bool bDropPacket);
 
   double m_audioClock;
 
@@ -170,8 +170,10 @@ protected:
   } m_decode;
 
   CDVDAudio m_dvdAudio; // audio output device
+  CDVDAudio m_dvdAudio2; // audio output device 2
   CDVDClock* m_pClock; // dvd master clock
   CDVDAudioCodec* m_pAudioCodec; // audio codec
+  CDVDAudioCodec* m_pAudioCodec2; // audio codec 2
   BitstreamStats m_audioStats;
 
   int     m_speed;
@@ -183,7 +185,7 @@ protected:
 
   CDVDPlayerResampler m_resampler;
 
-  bool OutputPacket(DVDAudioFrame &audioframe);
+  bool OutputPacket(DVDAudioFrame &audioframe, DVDAudioFrame &audioframe2);
 
   //SYNC_DISCON, SYNC_SKIPDUP, SYNC_RESAMPLE
   int    m_synctype;
@@ -197,6 +199,7 @@ protected:
 
   void   SetSyncType(bool passthrough);
   void   HandleSyncError(double duration);
+  void   HandleSyncAudio2(DVDAudioFrame &audioframe2);
   double m_errorbuff; //place to store average errors
   int    m_errorcount;//number of errors stored
   bool   m_syncclock;
@@ -206,5 +209,10 @@ protected:
   bool   m_prevskipped;
   double m_maxspeedadjust;
   double m_resampleratio; //resample ratio when using SYNC_RESAMPLE, used for the codec info
+
+  bool   m_bAudio2;
+  bool   m_bAudio2Stuck;
+  bool   m_bAudio2Pause;
+  double m_audiodiff;
 };
 

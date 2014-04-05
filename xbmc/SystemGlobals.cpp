@@ -48,6 +48,7 @@
 
   CXBMCRenderManager g_renderManager;
   CAudioContext      g_audioContext;
+  CAudioContext      g_audioContext2(true);
   CLangInfo          g_langInfo;
   CLangCodeExpander  g_LangCodeExpander;
   CLocalizeStrings   g_localizeStrings;

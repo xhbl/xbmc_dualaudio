@@ -49,6 +49,14 @@ CALSADirectSound::CALSADirectSound()
   m_bIsAllocated = false;
 }
 
+CALSADirectSound::CALSADirectSound(bool bAudio2)
+{
+  m_pPlayHandle  = NULL;
+  m_bIsAllocated = false;
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
+
 bool CALSADirectSound::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, EEncoded encoded)
 {
   enum PCMChannels *outLayout;
@@ -95,8 +103,16 @@ bool CALSADirectSound::Initialize(IAudioCallback* pCallback, const CStdString& d
   }
 
   bool bAudioOnAllSpeakers(false);
-  g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
-  g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  if (!m_bAudio2)
+  {
+    g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  }
+  else
+  {
+    g_audioContext2.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  }
 
   m_pPlayHandle = NULL;
   m_bPause = false;
@@ -319,7 +335,10 @@ bool CALSADirectSound::Deinitialize()
   }
 
   m_pPlayHandle=NULL;
-  g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  if (!m_bAudio2)
+    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  else
+    g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
   return true;
 }
 

@@ -74,16 +74,16 @@
   }                                        \
 }
 
-#define CreateAndReturnOnValidInitialize(rendererClass) \
+#define CreateAndReturnOnValidInitialize(rendererClass, bAudio2) \
 { \
-  audioSink = new rendererClass(); \
+  audioSink = new rendererClass(bAudio2); \
   ReturnOnValidInitialize(#rendererClass); \
 }
 
-#define ReturnNewRenderer(rendererClass) \
+#define ReturnNewRenderer(rendererClass, bAudio2) \
 { \
   renderer = #rendererClass; \
-  return new rendererClass(); \
+  return new rendererClass(bAudio2); \
 }
 
 /* windows channel order */
@@ -99,7 +99,7 @@ static const enum PCMChannels dsound_default_channel_layout[][8] =
   {PCM_FRONT_LEFT, PCM_FRONT_RIGHT, PCM_FRONT_CENTER, PCM_LOW_FREQUENCY, PCM_BACK_LEFT, PCM_BACK_RIGHT, PCM_SIDE_LEFT, PCM_SIDE_RIGHT}
 };
 
-IAudioRenderer* CAudioRendererFactory::Create(IAudioCallback* pCallback, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, IAudioRenderer::EEncoded encoded)
+IAudioRenderer* CAudioRendererFactory::Create(IAudioCallback* pCallback, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, IAudioRenderer::EEncoded encoded, bool bAudio2)
 {
   IAudioRenderer* audioSink = NULL;
   CStdString renderer;
@@ -111,27 +111,50 @@ IAudioRenderer* CAudioRendererFactory::Create(IAudioCallback* pCallback, int iCh
   }
 
   CStdString deviceString, device;
-  if (encoded)
+  if (!bAudio2)
   {
-#if defined(_LINUX) && !defined(__APPLE__)
-    deviceString = g_guiSettings.GetString("audiooutput.passthroughdevice");
-    if (deviceString.Equals("custom"))
-      deviceString = g_guiSettings.GetString("audiooutput.custompassthrough");
-#else
-    // osx/win platforms do not have an "audiooutput.passthroughdevice" setting but can do passthrough
-    deviceString = g_guiSettings.GetString("audiooutput.audiodevice");
-#endif
+    if (encoded)
+    {
+  #if defined(_LINUX) && !defined(__APPLE__)
+      deviceString = g_guiSettings.GetString("audiooutput.passthroughdevice");
+      if (deviceString.Equals("custom"))
+        deviceString = g_guiSettings.GetString("audiooutput.custompassthrough");
+  #else
+      // osx/win platforms do not have an "audiooutput.passthroughdevice" setting but can do passthrough
+      deviceString = g_guiSettings.GetString("audiooutput.audiodevice");
+  #endif
+    }
+    else
+    {
+      deviceString = g_guiSettings.GetString("audiooutput.audiodevice");
+      if (deviceString.Equals("custom"))
+        deviceString = g_guiSettings.GetString("audiooutput.customdevice");
+    }
   }
   else
   {
-    deviceString = g_guiSettings.GetString("audiooutput.audiodevice");
-    if (deviceString.Equals("custom"))
-      deviceString = g_guiSettings.GetString("audiooutput.customdevice");
+    if (encoded)
+    {
+#if defined(_LINUX) && !defined(__APPLE__)
+      deviceString = g_guiSettings.GetString("audiooutput2.passthroughdevice");
+      if (deviceString.Equals("custom"))
+        deviceString = g_guiSettings.GetString("audiooutput2.custompassthrough");
+#else
+      // osx/win platforms do not have an "audiooutput.passthroughdevice" setting but can do passthrough
+      deviceString = g_guiSettings.GetString("audiooutput2.audiodevice");
+#endif
+    }
+    else
+    {
+      deviceString = g_guiSettings.GetString("audiooutput2.audiodevice");
+      if (deviceString.Equals("custom"))
+        deviceString = g_guiSettings.GetString("audiooutput2.customdevice");
+    }
   }
   int iPos = deviceString.Find(":");
   if (iPos > 0)
   {
-    audioSink = CreateFromUri(deviceString.Left(iPos), renderer);
+    audioSink = CreateFromUri(deviceString.Left(iPos), renderer, bAudio2);
     if (audioSink)
     {
       device = deviceString.Right(deviceString.length() - iPos - 1);
@@ -141,12 +164,12 @@ IAudioRenderer* CAudioRendererFactory::Create(IAudioCallback* pCallback, int iCh
       //If WASAPI failed try DirectSound.
       if(deviceString.Left(iPos).Equals("wasapi"))
       {
-        audioSink = CreateFromUri("directsound", renderer);
+        audioSink = CreateFromUri("directsound", renderer, bAudio2);
         ReturnOnValidInitialize(renderer.c_str());
       }
 #endif
 
-      CreateAndReturnOnValidInitialize(CNullDirectSound);
+      CreateAndReturnOnValidInitialize(CNullDirectSound, bAudio2);
       /* should never get here */
       assert(false);
     }
@@ -157,24 +180,24 @@ IAudioRenderer* CAudioRendererFactory::Create(IAudioCallback* pCallback, int iCh
 
 /* First pass creation */
 #ifdef HAS_PULSEAUDIO
-  CreateAndReturnOnValidInitialize(CPulseAudioDirectSound);
+  CreateAndReturnOnValidInitialize(CPulseAudioDirectSound, bAudio2);
 #endif
 
 /* incase none in the first pass was able to be created, fall back to os specific */
 #ifdef WIN32
-  CreateAndReturnOnValidInitialize(CWin32DirectSound);
+  CreateAndReturnOnValidInitialize(CWin32DirectSound, bAudio2);
 #endif
 #if defined(__APPLE__)
   #if defined(__arm__)
-    CreateAndReturnOnValidInitialize(CIOSAudioRenderer);
+    CreateAndReturnOnValidInitialize(CIOSAudioRenderer, bAudio2);
   #else
-    CreateAndReturnOnValidInitialize(CCoreAudioRenderer);
+    CreateAndReturnOnValidInitialize(CCoreAudioRenderer, bAudio2);
   #endif
 #elif defined(USE_ALSA)
-  CreateAndReturnOnValidInitialize(CALSADirectSound);
+  CreateAndReturnOnValidInitialize(CALSADirectSound, bAudio2);
 #endif
 
-  CreateAndReturnOnValidInitialize(CNullDirectSound);
+  CreateAndReturnOnValidInitialize(CNullDirectSound, bAudio2);
   /* should never get here */
   assert(false);
   return NULL;
@@ -200,35 +223,35 @@ void CAudioRendererFactory::EnumerateAudioSinks(AudioSinkList& vAudioSinks, bool
 #endif
 }
 
-IAudioRenderer *CAudioRendererFactory::CreateFromUri(const CStdString &soundsystem, CStdString &renderer)
+IAudioRenderer *CAudioRendererFactory::CreateFromUri(const CStdString &soundsystem, CStdString &renderer, bool bAudio2)
 {
 #ifdef HAS_PULSEAUDIO
   if (soundsystem.Equals("pulse"))
-    ReturnNewRenderer(CPulseAudioDirectSound);
+    ReturnNewRenderer(CPulseAudioDirectSound, bAudio2);
 #endif
 
 #ifdef WIN32
   if (soundsystem.Equals("wasapi"))
-    ReturnNewRenderer(CWin32WASAPI)
+    ReturnNewRenderer(CWin32WASAPI, bAudio2)
   else if (soundsystem.Equals("directsound"))
-    ReturnNewRenderer(CWin32DirectSound);
+    ReturnNewRenderer(CWin32DirectSound, bAudio2);
 #endif
 
 #if defined(__APPLE__)
   #if defined(__arm__)
     if (soundsystem.Equals("ioscoreaudio"))
-      ReturnNewRenderer(CIOSAudioRenderer);
+      ReturnNewRenderer(CIOSAudioRenderer, bAudio2);
   #else
     if (soundsystem.Equals("coreaudio"))
-      ReturnNewRenderer(CCoreAudioRenderer);
+      ReturnNewRenderer(CCoreAudioRenderer, bAudio2);
   #endif
 #elif defined(USE_ALSA)
   if (soundsystem.Equals("alsa"))
-    ReturnNewRenderer(CALSADirectSound);
+    ReturnNewRenderer(CALSADirectSound, bAudio2);
 #endif
 
   if (soundsystem.Equals("null"))
-    ReturnNewRenderer(CNullDirectSound);
+    ReturnNewRenderer(CNullDirectSound, bAudio2);
 
   return NULL;
 }

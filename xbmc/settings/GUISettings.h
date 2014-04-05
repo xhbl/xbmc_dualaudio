@@ -75,6 +75,7 @@ class TiXmlElement;
 #define CDDARIP_QUALITY_STANDARD 2
 #define CDDARIP_QUALITY_EXTREME  3
 
+#define AUDIO_NONE        0xF
 #define AUDIO_ANALOG      0
 #define AUDIO_IEC958      1
 #define AUDIO_HDMI        2

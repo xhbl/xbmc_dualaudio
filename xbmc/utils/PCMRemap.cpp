@@ -176,7 +176,8 @@ CPCMRemap::CPCMRemap() :
   m_attenuationMin(1.0),
   m_sampleRate  (48000.0), //safe default
   m_holdCounter (0),
-  m_limiterEnabled(false)
+  m_limiterEnabled(false),
+  m_bAudio2     (false)
 {
   Dispose();
 }
@@ -362,7 +363,11 @@ void CPCMRemap::BuildMap()
   m_outStride = m_inSampleSize * m_outChannels;
 
   /* see if we need to normalize the levels */
-  bool dontnormalize = g_guiSettings.GetBool("audiooutput.dontnormalizelevels");
+  bool dontnormalize;
+  if (!m_bAudio2)
+    dontnormalize = g_guiSettings.GetBool("audiooutput.dontnormalizelevels");
+  else
+    dontnormalize = g_guiSettings.GetBool("audiooutput2.dontnormalizelevels");
   CLog::Log(LOGDEBUG, "CPCMRemap: Downmix normalization is %s", (dontnormalize ? "disabled" : "enabled"));
 
   ResolveChannels();
@@ -457,7 +462,10 @@ enum PCMChannels *CPCMRemap::SetInputFormat(unsigned int channels, enum PCMChann
   assert(sampleSize == 2);
 
   /* get the audio layout, and count the channels in it */
-  m_channelLayout  = (enum PCMLayout)g_guiSettings.GetInt("audiooutput.channellayout");
+  if (!m_bAudio2)
+    m_channelLayout  = (enum PCMLayout)g_guiSettings.GetInt("audiooutput.channellayout");
+  else
+    m_channelLayout  = (enum PCMLayout)g_guiSettings.GetInt("audiooutput2.channellayout");
   if (m_channelLayout >= PCM_MAX_LAYOUT) m_channelLayout = PCM_LAYOUT_2_0;
 
   //spdif only has 2 pcm channels, so don't try to use more
