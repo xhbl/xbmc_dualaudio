@@ -65,6 +65,7 @@ public:
   virtual void  SetVolume(const float volume);
   virtual void  SetMute(const bool enabled) { m_muted = enabled; }
   virtual bool  IsMuted() { return m_muted; }
+  virtual bool  IsDumb() { return m_bDumb; }
   virtual void  SetSoundMode(const int mode);
 
   /* returns a new stream for data in the specified format */
@@ -100,6 +101,7 @@ public:
 
   virtual void EnumerateOutputDevices(AEDeviceList &devices, bool passthrough);
   virtual std::string GetDefaultDevice(bool passthrough);
+  virtual std::string GetCreateDevice() {return m_deviceCreate;}
   virtual bool SupportsRaw();
 
   /* internal stream methods */
@@ -112,6 +114,8 @@ private:
   CSoftAEStream *GetMasterStream();
 
   void LoadSettings();
+  void LoadSettings2();
+  void  OnSettingsChange2(const std::string& setting);
   void VerifySoundDevice(std::string &device, bool passthrough);
   void OpenSink();
 
@@ -132,6 +136,7 @@ private:
   std::string m_device;
   std::string m_passthroughDevice;
   std::string m_deviceFriendlyName;
+  std::string m_deviceCreate;
   bool m_audiophile;
   bool m_stereoUpmix;
 
@@ -155,6 +160,7 @@ private:
   /* the current configuration */
   float               m_volume;
   bool                m_muted;
+  bool                m_bDumb;
   CAEChannelInfo      m_chLayout;
   unsigned int        m_frameSize;
   double              m_frameSizeMul;

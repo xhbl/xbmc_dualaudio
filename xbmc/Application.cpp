@@ -747,6 +747,7 @@ bool CApplication::Create()
   SetHardwareVolume(g_settings.m_fVolumeLevel);
   CAEFactory::SetMute     (g_settings.m_bMute);
   CAEFactory::SetSoundMode(g_guiSettings.GetInt("audiooutput.guisoundmode"));
+  CAEFactory::SetSoundMode(g_guiSettings.GetInt("audiooutput2.guisoundmode"),true);
 
   // initialize the addon database (must be before the addon manager is init'd)
   CDatabaseManager::Get().Initialize(true);

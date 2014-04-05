@@ -132,6 +132,7 @@ private:
   unsigned int        m_upcomingCrossfadeMS; /* how long the upcoming crossfade is in ms */
   CEvent              m_startEvent;          /* event for playback start */
   StreamInfo*         m_currentStream;       /* the current playing stream */
+  StreamInfo*         m_currentStream2;      /* the current playing stream */
   IAudioCallback*     m_audioCallback;       /* the viz audio callback */
 
   CFileItem*          m_FileItem;            /* our queued file or current file if no file is queued */      
@@ -139,13 +140,26 @@ private:
   CSharedSection      m_streamsLock;         /* lock for the stream list */
   StreamList          m_streams;             /* playing streams */  
   StreamList          m_finishing;           /* finishing streams */
+  StreamList          m_streams2;            /* playing streams */  
+  StreamList          m_finishing2;          /* finishing streams */
+  bool                m_bAudio2;
+  bool                m_bAudio2Queued;
+  bool                m_bStreamed;
+  bool                m_bStreamed2;
+  bool                m_bBothDrained;
+  int                 m_iTimeDrained;
+  StreamInfo*         m_drainedStream;
+  StreamInfo*         m_drainedStream2;
 
+  bool QueueNextFileEx2(const CFileItem &file, bool fadeIn, bool bAudio2);
   bool QueueNextFileEx(const CFileItem &file, bool fadeIn = true);
   void SoftStart(bool wait = false);
   void SoftStop(bool wait = false, bool close = true);
   void CloseAllStreams(bool fade = true);
+  void CheckDrainedStreams();
+  void ProcessStreams2(double &delay, double &buffer);
   void ProcessStreams(double &delay, double &buffer);
-  bool PrepareStream(StreamInfo *si);
+  bool PrepareStream(StreamInfo *si, bool bAudio2 = false);
   bool ProcessStream(StreamInfo *si, double &delay, double &buffer);
   bool QueueData(StreamInfo *si);
   int64_t GetTotalTime64();

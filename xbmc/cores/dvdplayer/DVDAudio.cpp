@@ -116,7 +116,7 @@ CDVDAudio::~CDVDAudio()
   free(m_pBuffer);
 }
 
-bool CDVDAudio::Create(const DVDAudioFrame &audioframe, CodecID codec, bool needresampler)
+bool CDVDAudio::Create(const DVDAudioFrame &audioframe, CodecID codec, bool needresampler, bool bAudio2/* = false*/)
 {
   CLog::Log(LOGNOTICE,
     "Creating audio stream (codec id: %i, channels: %i, sample rate: %i, %s)",
@@ -136,7 +136,7 @@ bool CDVDAudio::Create(const DVDAudioFrame &audioframe, CodecID codec, bool need
     audioframe.sample_rate,
     audioframe.encoded_sample_rate,
     audioframe.channel_layout,
-    options
+    options, bAudio2
   );
   if (!m_pAudioStream) return false;
 

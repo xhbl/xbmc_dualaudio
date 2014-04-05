@@ -34,7 +34,7 @@
 #include "utils/EndianSwap.h"
 
 /* typecast AE to CCoreAudioAE */
-#define AE (*(CCoreAudioAE*)CAEFactory::GetEngine())
+#define AE (*(CCoreAudioAE*)CAEFactory::GetEngine(m_bAudio2))
 
 CCoreAudioAESound::CCoreAudioAESound(const std::string &filename) :
   IAESound         (filename),
@@ -64,6 +64,7 @@ bool CCoreAudioAESound::Initialize()
 {
   if (!m_wavLoader.IsValid())
     return false;
+  m_wavLoader.SetAudio2(m_bAudio2);
 
   return m_wavLoader.Initialize(
     AE.GetSampleRate   (),

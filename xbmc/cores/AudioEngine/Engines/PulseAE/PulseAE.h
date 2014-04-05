@@ -68,6 +68,7 @@ public:
 
   virtual void SetMute(const bool enabled);
   virtual bool IsMuted() { return m_muted; }
+  virtual bool IsDumb() { return m_bDumb; }
   virtual void SetSoundMode(const int mode) {}
 #if PA_CHECK_VERSION(1,0,0)
   virtual bool SupportsRaw() { return true; }
@@ -85,6 +86,7 @@ private:
   pa_threaded_mainloop *m_MainLoop;
   float m_Volume;
   bool m_muted;
+  bool m_bDumb;
 };
 
 #endif

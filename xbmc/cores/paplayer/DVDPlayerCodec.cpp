@@ -132,8 +132,8 @@ bool DVDPlayerCodec::Init(const CStdString &strFile, unsigned int filecache)
 
   CDVDStreamInfo hint(*pStream, true);
 
-  bool passthrough = AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput.mode"));
-  m_pAudioCodec = CDVDFactoryCodec::CreateAudioCodec(hint, passthrough);
+  bool passthrough = AUDIO_IS_BITSTREAM(g_guiSettings.GetInt(!m_bAudio2 ? "audiooutput.mode" : "audiooutput2.mode"));
+  m_pAudioCodec = CDVDFactoryCodec::CreateAudioCodec(hint, passthrough, m_bAudio2);
   if (!m_pAudioCodec)
   {
     CLog::Log(LOGERROR, "%s: Could not create audio codec", __FUNCTION__);

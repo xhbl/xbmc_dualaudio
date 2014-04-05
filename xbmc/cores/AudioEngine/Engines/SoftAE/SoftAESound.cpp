@@ -32,7 +32,7 @@
 #include "SoftAESound.h"
 
 /* typecast AE to CSoftAE */
-#define AE (*((CSoftAE*)CAEFactory::GetEngine()))
+#define AE (*((CSoftAE*)CAEFactory::GetEngine(m_bAudio2)))
 
 typedef struct
 {
@@ -69,6 +69,7 @@ bool CSoftAESound::Initialize()
 {
   if (!m_wavLoader.IsValid())
     return false;
+  m_wavLoader.SetAudio2(m_bAudio2);
 
   return m_wavLoader.Initialize(
     AE.GetSampleRate   (),

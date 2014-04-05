@@ -100,12 +100,12 @@ bool CAEEncoderFFmpeg::Initialize(AEAudioFormat &format)
 
   m_dllAvCodec.avcodec_register_all();
 
-  bool ac3 = g_guiSettings.GetBool("audiooutput.ac3passthrough");
+  bool ac3 = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.ac3passthrough" : "audiooutput2.ac3passthrough");
 
   AVCodec *codec = NULL;
 #if 0
   /* the DCA encoder is currently useless for transcode, it creates a 196 kHz DTS-HD like mongrel which is useless for SPDIF */
-  bool dts = g_guiSettings.GetBool("audiooutput.dtspassthrough");
+  bool dts = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.dtspassthrough" : "audiooutput2.dtspassthrough");
   if (dts && (!ac3 || g_advancedSettings.m_audioTranscodeTo.Equals("dts")))
   {
     m_CodecName = "DTS";

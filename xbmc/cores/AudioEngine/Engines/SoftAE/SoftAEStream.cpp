@@ -30,7 +30,7 @@
 #include "SoftAEStream.h"
 
 /* typecast AE to CSoftAE */
-#define AE (*((CSoftAE*)CAEFactory::GetEngine()))
+#define AE (*((CSoftAE*)CAEFactory::GetEngine(m_bAudio2)))
 
 using namespace std;
 
@@ -78,6 +78,8 @@ void CSoftAEStream::InitializeRemap()
   if (!AE_IS_RAW(m_initDataFormat))
   {
     /* re-init the remappers */
+	m_remap.SetAudio2(m_bAudio2);
+	m_vizRemap.SetAudio2(m_bAudio2);
     m_remap   .Initialize(m_initChannelLayout, AE.GetChannelLayout()           , false, false, AE.GetStdChLayout());
     m_vizRemap.Initialize(m_initChannelLayout, CAEChannelInfo(AE_CH_LAYOUT_2_0), false, true);
 
@@ -153,6 +155,8 @@ void CSoftAEStream::Initialize()
     m_newPacket->data.Alloc(m_format.m_frames * m_format.m_frameSize);
   else
   {
+    m_remap.SetAudio2(m_bAudio2);
+    m_vizRemap.SetAudio2(m_bAudio2);
     if (
       !m_remap   .Initialize(m_initChannelLayout, m_aeChannelLayout               , false, false, AE.GetStdChLayout()) ||
       !m_vizRemap.Initialize(m_initChannelLayout, CAEChannelInfo(AE_CH_LAYOUT_2_0), false, true))

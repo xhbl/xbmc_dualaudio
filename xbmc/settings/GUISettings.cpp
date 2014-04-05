@@ -521,6 +521,63 @@ void CGUISettings::Initialize()
   AddInt(ao, "audiooutput.guisoundmode", 34120, AE_SOUND_IDLE, guimode, SPIN_CONTROL_TEXT);
 #endif
 
+  //AddSeparator(ao, "audiooutput2.sep0");
+  ao = AddCategory(SETTINGS_SYSTEM, "audiooutput2", 772);
+
+  map<int,int> audiomode2;
+  audiomode2.insert(make_pair(13106,AUDIO_NONE));
+  audiomode2.insert(make_pair(338,AUDIO_ANALOG));
+#if !defined(TARGET_RASPBERRY_PI)
+  audiomode2.insert(make_pair(339,AUDIO_IEC958));
+#endif
+  audiomode2.insert(make_pair(420,AUDIO_HDMI  ));
+#if defined(TARGET_RASPBERRY_PI)
+  AddInt(ao, "audiooutput2.mode", 337, AUDIO_NONE, audiomode2, SPIN_CONTROL_TEXT);
+#else
+  AddInt(ao, "audiooutput2.mode", 337, AUDIO_NONE, audiomode2, SPIN_CONTROL_TEXT);
+#endif
+  
+  AddInt(ao, "audiooutput2.channels", 34100, AE_CH_LAYOUT_2_0, channelLayout, SPIN_CONTROL_TEXT);
+  AddBool(ao, "audiooutput2.normalizelevels", 346, true);
+  AddBool(ao, "audiooutput2.stereoupmix", 252, false);
+  
+#if defined(TARGET_DARWIN_IOS)
+	aocat = g_sysinfo.IsAppleTV2() ? ao : NULL;
+#else
+	aocat = ao;
+#endif
+
+  AddBool(aocat, "audiooutput2.ac3passthrough"   , 364, true);
+  AddBool(aocat, "audiooutput2.dtspassthrough"   , 254, true);
+  
+  
+#if !defined(TARGET_DARWIN) && !defined(TARGET_RASPBERRY_PI)
+  AddBool(aocat, "audiooutput2.passthroughaac"   , 299, false);
+#endif
+#if !defined(TARGET_DARWIN_IOS) && !defined(TARGET_RASPBERRY_PI)
+  AddBool(aocat, "audiooutput2.multichannellpcm" , 348, true );
+#endif
+#if !defined(TARGET_DARWIN) && !defined(TARGET_RASPBERRY_PI)
+  AddBool(aocat, "audiooutput2.truehdpassthrough", 349, true );
+  AddBool(aocat, "audiooutput2.dtshdpassthrough" , 347, true );
+#endif
+  
+#if !defined(TARGET_RASPBERRY_PI)
+#if defined(TARGET_DARWIN)
+  AddString(ao, "audiooutput2.audiodevice", 545, defaultDeviceName.c_str(), SPIN_CONTROL_TEXT);
+  AddString(NULL, "audiooutput2.passthroughdevice", 546, defaultDeviceName.c_str(), SPIN_CONTROL_TEXT);
+#else
+  AddSeparator(ao, "audiooutput2.sep1");
+  AddString	(ao, "audiooutput2.audiodevice"		, 545, CStdString(CAEFactory::GetDefaultDevice(false,true)), SPIN_CONTROL_TEXT);
+  AddString	(ao, "audiooutput2.passthroughdevice", 546, CStdString(CAEFactory::GetDefaultDevice(true,true)), SPIN_CONTROL_TEXT);
+  AddSeparator(ao, "audiooutput2.sep2");
+#endif
+#endif
+
+#if !defined(TARGET_RASPBERRY_PI)
+  AddInt(ao, "audiooutput2.guisoundmode", 34120, AE_SOUND_IDLE, guimode, SPIN_CONTROL_TEXT);
+#endif
+
   CSettingsCategory* in = AddCategory(SETTINGS_SYSTEM, "input", 14094);
   AddString(in, "input.peripherals", 35000, "", BUTTON_CONTROL_STANDARD);
 #if defined(TARGET_DARWIN)
@@ -1377,6 +1434,25 @@ void CGUISettings::LoadXML(TiXmlElement *pRootElement, bool hideSettings /* = fa
       std::string audiodevice = GetString("audiooutput.audiodevice");
       CAEFactory::VerifyOutputDevice(audiodevice, false);
       SetString("audiooutput.audiodevice", audiodevice.c_str());
+
+      updated = true;
+    }
+  }
+  channelNode = pRootElement->FirstChild("audiooutput2");
+  if (channelNode != NULL)
+  {
+    channelNode = channelNode->FirstChild("channellayout");
+    CSettingInt* channels = (CSettingInt*)GetSetting("audiooutput2.channels");
+    if (channelNode != NULL && channelNode->FirstChild() != NULL && channels != NULL)
+    {
+      channels->FromString(channelNode->FirstChild()->ValueStr());
+      if (channels->GetData() < AE_CH_LAYOUT_MAX - 1)
+        channels->SetData(channels->GetData() + 1);
+
+      // let's just reset the audiodevice settings as well
+      std::string audiodevice = GetString("audiooutput2.audiodevice");
+      CAEFactory::VerifyOutputDevice(audiodevice, false);
+      SetString("audiooutput2.audiodevice", audiodevice.c_str());
 
       updated = true;
     }

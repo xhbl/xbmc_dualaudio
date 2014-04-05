@@ -75,6 +75,7 @@ public:
   void *GetData(unsigned int samples);
   ICodec *GetCodec() const { return m_codec; }
   float GetReplayGain();
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
 
 private:
   // pcm buffer
@@ -96,4 +97,6 @@ private:
   ICodec*          m_codec;
 
   CCriticalSection m_critSection;
+
+  bool    m_bAudio2;
 };

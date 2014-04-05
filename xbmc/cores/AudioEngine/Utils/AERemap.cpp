@@ -31,6 +31,7 @@ using namespace std;
 CAERemap::CAERemap() : m_inChannels(0), m_outChannels(0) 
 {
   memset(m_mixInfo, 0, sizeof(m_mixInfo));
+  m_bAudio2 = false;
 }
 
 CAERemap::~CAERemap()
@@ -184,7 +185,7 @@ bool CAERemap::Initialize(CAEChannelInfo input, CAEChannelInfo output, bool fina
 
   #undef RM
 
-  if (g_guiSettings.GetBool("audiooutput.stereoupmix"))
+  if (g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.stereoupmix" : "audiooutput2.stereoupmix"))
     BuildUpmixMatrix(input, output);
 
   /* normalize the values */
@@ -194,7 +195,7 @@ bool CAERemap::Initialize(CAEChannelInfo input, CAEChannelInfo output, bool fina
   else
   {
     //FIXME: guisetting is reversed, change the setting name after frodo
-    normalize = !g_guiSettings.GetBool("audiooutput.normalizelevels");
+    normalize = !g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.normalizelevels" : "audiooutput2.normalizelevels");
     CLog::Log(LOGDEBUG, "AERemap: Downmix normalization is %s", (normalize ? "enabled" : "disabled"));
   }
 

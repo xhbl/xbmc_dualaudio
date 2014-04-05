@@ -52,6 +52,7 @@ bool CPulseAESound::Initialize()
   /* we dont re-init the wav loader in PA as PA handles the samplerate */
   if (!m_wavLoader.IsValid())
     return false;
+  m_wavLoader.SetAudio2(m_bAudio2);
 
   m_sampleSpec.format   = PA_SAMPLE_FLOAT32NE;
   m_sampleSpec.rate     = m_wavLoader.GetSampleRate();
@@ -81,7 +82,7 @@ bool CPulseAESound::Initialize()
       return false;
   }
 
-  m_maxVolume     = CAEFactory::GetEngine()->GetVolume();
+  m_maxVolume     = CAEFactory::GetEngine(m_bAudio2)->GetVolume();
   m_volume        = 1.0f;
   pa_volume_t paVolume = pa_sw_volume_from_linear((double)(m_volume * m_maxVolume));
   pa_cvolume_set(&m_chVolume, m_sampleSpec.channels, paVolume);

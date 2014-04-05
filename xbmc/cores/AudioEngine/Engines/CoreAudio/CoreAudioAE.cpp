@@ -156,6 +156,8 @@ void CCoreAudioAE::AudioDevicesChanged()
 bool CCoreAudioAE::Initialize()
 {
   CSingleLock engineLock(m_engineLock);
+  if(m_bAudio2)
+    SetDisabled(g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE);
 
   Stop();
 
@@ -206,12 +208,13 @@ bool CCoreAudioAE::OpenCoreAudio(unsigned int sampleRate, bool forceRaw,
   if (m_rawPassthrough)
     CLog::Log(LOGINFO, "CCoreAudioAE::OpenCoreAudio - RAW passthrough enabled");
 
-  std::string m_outputDevice =  g_guiSettings.GetString("audiooutput.audiodevice");
+  std::string m_outputDevice =  g_guiSettings.GetString(!m_bAudio2 ? "audiooutput.audiodevice" : "audiooutput2.audiodevice");
 
   // on iOS devices we set fixed to two channels.
   m_stdChLayout = AE_CH_LAYOUT_2_0;
 #if defined(TARGET_DARWIN_OSX)
-  switch (g_guiSettings.GetInt("audiooutput.channels"))
+  int ao_channels = g_guiSettings.GetInt(!m_bAudio2 ? "audiooutput.channels" : "audiooutput2.channels");
+  switch (ao_channels)
   {
     default:
     case  0: m_stdChLayout = AE_CH_LAYOUT_2_0; break; /* do not allow 1_0 output */
@@ -228,7 +231,8 @@ bool CCoreAudioAE::OpenCoreAudio(unsigned int sampleRate, bool forceRaw,
   }
 #endif
   // force optical/coax to 2.0 output channels
-  if (!m_rawPassthrough && g_guiSettings.GetInt("audiooutput.mode") == AUDIO_IEC958)
+  int ao_mode = g_guiSettings.GetInt(!m_bAudio2 ? "audiooutput.mode" : "audiooutput2.mode");
+  if (!m_rawPassthrough && ao_mode == AUDIO_IEC958)
     m_stdChLayout = AE_CH_LAYOUT_2_0;
 
   // setup the desired format
@@ -286,6 +290,7 @@ bool CCoreAudioAE::OpenCoreAudio(unsigned int sampleRate, bool forceRaw,
   AEAudioFormat initformat = m_format;
 
   // initialize audio hardware
+  HAL->SetAudio2(m_bAudio2);
   m_Initialized = HAL->Initialize(this, m_rawPassthrough, initformat, rawDataFormat, m_outputDevice, m_volume);
 
   unsigned int bps         = CAEUtil::DataFormatToBits(m_format.m_dataFormat);
@@ -363,6 +368,9 @@ void CCoreAudioAE::Deinitialize()
 
 void CCoreAudioAE::OnSettingsChange(const std::string& setting)
 {
+  if(m_bAudio2)
+    return OnSettingsChange2(setting);
+	
   if (setting == "audiooutput.dontnormalizelevels")
   {
     // re-init streams remapper
@@ -381,6 +389,36 @@ void CCoreAudioAE::OnSettingsChange(const std::string& setting)
       setting == "audiooutput.dtspassthrough"    ||
       setting == "audiooutput.channels"     ||
       setting == "audiooutput.multichannellpcm")
+  {
+    // only reinit the engine if we not
+    // suspended (resume will initialize
+    // us again in that case)
+    if (!m_isSuspended)
+      Initialize();
+  }
+}
+
+void CCoreAudioAE::OnSettingsChange2(const std::string& setting)
+{
+  SetDisabled(g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE);
+  if (setting == "audiooutput2.dontnormalizelevels")
+  {
+    // re-init streams remapper
+    CSingleLock streamLock(m_streamLock);
+    for (StreamList::iterator itt = m_streams.begin(); itt != m_streams.end(); ++itt)
+      (*itt)->InitializeRemap();
+    streamLock.Leave();
+  }
+
+  if (setting == "audiooutput2.passthroughdevice" ||
+      setting == "audiooutput2.custompassthrough" ||
+      setting == "audiooutput2.audiodevice"       ||
+      setting == "audiooutput2.customdevice"      ||
+      setting == "audiooutput2.mode"              ||
+      setting == "audiooutput2.ac3passthrough"    ||
+      setting == "audiooutput2.dtspassthrough"    ||
+      setting == "audiooutput2.channels"     ||
+      setting == "audiooutput2.multichannellpcm")
   {
     // only reinit the engine if we not
     // suspended (resume will initialize
@@ -464,6 +502,11 @@ bool CCoreAudioAE::IsMuted()
   return m_muted;
 }
 
+bool CCoreAudioAE::IsDumb()
+{
+  return IsDisabled() || !m_Initialized;
+}
+
 bool CCoreAudioAE::IsSuspended()
 {
   return m_isSuspended;
@@ -501,6 +544,7 @@ IAEStream* CCoreAudioAE::MakeStream(enum AEDataFormat dataFormat,
     CAEUtil::DataFormatToStr(dataFormat), sampleRate, encodedSamplerate, ((std::string)channelInfo).c_str());
 
   CCoreAudioAEStream *stream = new CCoreAudioAEStream(dataFormat, sampleRate, encodedSamplerate, channelLayout, options);
+  stream->SetAudio2(m_bAudio2);
   CSingleLock streamLock(m_streamLock);
   m_streams.push_back(stream);
   streamLock.Leave();
@@ -624,6 +668,7 @@ IAESound *CCoreAudioAE::MakeSound(const std::string& file)
   }
 
   CCoreAudioAESound *sound = new CCoreAudioAESound(file);
+  sound->SetAudio2(m_bAudio2);
   if (!sound->Initialize())
   {
     delete sound;

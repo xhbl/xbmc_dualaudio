@@ -32,12 +32,16 @@
 #endif
 
 IAE* CAEFactory::AE = NULL;
+IAE* CAEFactory::AE2 = NULL;
 static float  g_fVolume = 1.0f;
 static bool   g_bMute = false;
 
-IAE *CAEFactory::GetEngine()
+IAE *CAEFactory::GetEngine(bool bAudio2)
 {
-  return AE;
+  if(!bAudio2)
+    return AE;
+  else
+    return AE2;
 }
 
 bool CAEFactory::LoadEngine()
@@ -109,6 +113,32 @@ bool CAEFactory::LoadEngine(enum AEEngine engine)
     AE = NULL;
   }
 
+  if (!AE2)
+  {
+    switch(engine)
+    {
+      case AE_ENGINE_NULL	  :
+#if defined(TARGET_DARWIN)
+      case AE_ENGINE_COREAUDIO: AE2 = new CCoreAudioAE(); break;
+#else
+      case AE_ENGINE_SOFT	  : AE2 = new CSoftAE(); break;
+#endif
+#if defined(HAS_PULSEAUDIO)
+      case AE_ENGINE_PULSE	  : AE2 = new CPulseAE(); break;
+#endif
+  
+      default: break;
+    }
+  
+    if (AE2)
+        AE2->SetAudio2(true);
+    if (AE2 && !AE2->CanInit())
+    {
+      delete AE2;
+      AE2 = NULL;
+    }
+  }
+
   return AE != NULL;
 }
 
@@ -119,6 +149,12 @@ void CAEFactory::UnLoadEngine()
     AE->Shutdown();
     delete AE;
     AE = NULL;
+  }
+  if(AE2)
+  {
+    AE2->Shutdown();
+    delete AE2;
+    AE2 = NULL;
   }
 }
 
@@ -132,7 +168,17 @@ bool CAEFactory::StartEngine()
     return false;
 
   if (AE->Initialize())
+  {
+    if (AE2)
+    {
+      if(!AE2->Initialize())
+      {
+        delete AE2;
+        AE2 = NULL;
+      }
+    }
     return true;
+  }
 
   delete AE;
   AE = NULL;
@@ -141,18 +187,24 @@ bool CAEFactory::StartEngine()
 
 bool CAEFactory::Suspend()
 {
+  bool bRet = false;
   if(AE)
-    return AE->Suspend();
+    bRet = AE->Suspend();
+  if (AE2)
+    AE2->Suspend();
 
-  return false;
+  return bRet;
 }
 
 bool CAEFactory::Resume()
 {
+  bool bRet = false;
   if(AE)
-    return AE->Resume();
+    bRet = AE->Resume();
+  if (AE2)
+    AE2->Resume();
 
-  return false;
+  return bRet;
 }
 
 bool CAEFactory::IsSuspended()
@@ -165,36 +217,50 @@ bool CAEFactory::IsSuspended()
 }
 
 /* engine wrapping */
-IAESound *CAEFactory::MakeSound(const std::string &file)
+IAESound *CAEFactory::MakeSound(const std::string &file, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->MakeSound(file);
+  if(bAudio2 && AE2)
+    return AE2->MakeSound(file);
   
   return NULL;
 }
 
 void CAEFactory::FreeSound(IAESound *sound)
 {
-  if(AE)
+  if(!sound)
+    return;
+  bool bAudio2 = sound->IsAudio2();
+
+  if(!bAudio2 && AE)
     AE->FreeSound(sound);
+  if(bAudio2 && AE2)
+    AE2->FreeSound(sound);
 }
 
-void CAEFactory::SetSoundMode(const int mode)
+void CAEFactory::SetSoundMode(const int mode, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     AE->SetSoundMode(mode);
+  if(bAudio2 && AE2)
+    AE2->SetSoundMode(mode);
 }
 
-void CAEFactory::OnSettingsChange(std::string setting)
+void CAEFactory::OnSettingsChange(std::string setting, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     AE->OnSettingsChange(setting);
+  if(bAudio2 && AE2)
+    AE2->OnSettingsChange(setting);
 }
 
-void CAEFactory::EnumerateOutputDevices(AEDeviceList &devices, bool passthrough)
+void CAEFactory::EnumerateOutputDevices(AEDeviceList &devices, bool passthrough, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     AE->EnumerateOutputDevices(devices, passthrough);
+  if(bAudio2 && AE2)
+    AE2->EnumerateOutputDevices(devices, passthrough);
 }
 
 void CAEFactory::VerifyOutputDevice(std::string &device, bool passthrough)
@@ -223,18 +289,32 @@ void CAEFactory::VerifyOutputDevice(std::string &device, bool passthrough)
   device = firstDevice;
 }
 
-std::string CAEFactory::GetDefaultDevice(bool passthrough)
+std::string CAEFactory::GetDefaultDevice(bool passthrough, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->GetDefaultDevice(passthrough);
+  if(bAudio2 && AE2)
+    return AE2->GetDefaultDevice(passthrough);
 
   return "default";
 }
 
-bool CAEFactory::SupportsRaw()
+std::string CAEFactory::GetCreateDevice(bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
+    return AE->GetCreateDevice();
+  if(bAudio2 && AE2)
+    return AE2->GetCreateDevice();
+
+  return "";
+}
+
+bool CAEFactory::SupportsRaw(bool bAudio2)
+{
+  if(!bAudio2 && AE)
     return AE->SupportsRaw();
+  if(bAudio2 && AE2)
+    return AE2->SupportsRaw();
 
   return false;
 }
@@ -243,6 +323,8 @@ void CAEFactory::SetMute(const bool enabled)
 {
   if(AE)
     AE->SetMute(enabled);
+  if(AE2)
+    AE2->SetMute(enabled);
 
   g_bMute = enabled;
 }
@@ -253,6 +335,16 @@ bool CAEFactory::IsMuted()
     return AE->IsMuted();
 
   return g_bMute || (g_fVolume == 0.0f);
+}
+
+bool CAEFactory::IsDumb(bool bAudio2)
+{
+  if(!bAudio2 && AE)
+    return AE->IsDumb();
+  if(bAudio2 && AE2)
+    return AE2->IsDumb();
+
+  return true;
 }
 
 float CAEFactory::GetVolume()
@@ -266,7 +358,10 @@ float CAEFactory::GetVolume()
 void CAEFactory::SetVolume(const float volume)
 {
   if(AE)
+  {
     AE->SetVolume(volume);
+    AE2->SetVolume(volume);
+  }
   else
     g_fVolume = volume;
 }
@@ -275,21 +370,31 @@ void CAEFactory::Shutdown()
 {
   if(AE)
     AE->Shutdown();
+  if(AE2)
+    AE2->Shutdown();
 }
 
 IAEStream *CAEFactory::MakeStream(enum AEDataFormat dataFormat, unsigned int sampleRate, 
-  unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options)
+  unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->MakeStream(dataFormat, sampleRate, encodedSampleRate, channelLayout, options);
+  if(bAudio2 && AE2)
+    return AE2->MakeStream(dataFormat, sampleRate, encodedSampleRate, channelLayout, options);
 
   return NULL;
 }
 
 IAEStream *CAEFactory::FreeStream(IAEStream *stream)
 {
-  if(AE)
+  if(!stream)
+    return NULL;
+  bool bAudio2 = stream->IsAudio2();
+
+  if(!bAudio2 && AE)
     return AE->FreeStream(stream);
+  if(bAudio2 && AE2)
+    return AE2->FreeStream(stream);
 
   return NULL;
 }
@@ -298,4 +403,26 @@ void CAEFactory::GarbageCollect()
 {
   if(AE)
     AE->GarbageCollect();
+  if(AE2)
+    AE2->GarbageCollect();
+}
+
+bool CAEFactory::IsDualAudioBetaExpired()
+{
+#if 1
+  struct tm expired_date;
+  memset(&expired_date, 0, sizeof(expired_date));
+
+  expired_date.tm_year = 2014; // beta test expired date set here
+  expired_date.tm_mon = 5;
+  expired_date.tm_mday = 31;
+
+  expired_date.tm_year-=1900;
+  expired_date.tm_mon--;
+  time_t expired_time = mktime(&expired_date);
+  time_t current_time = time(NULL);
+  if(current_time > expired_time)
+  	return true;
+#endif
+  return false;
 }

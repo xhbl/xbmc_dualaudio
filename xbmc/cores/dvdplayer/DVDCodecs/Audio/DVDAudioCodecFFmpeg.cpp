@@ -72,9 +72,9 @@ bool CDVDAudioCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
   }
 
 #if defined(TARGET_DARWIN)
-  int audioMode = g_guiSettings.GetInt("audiooutput.mode");
+  int audioMode = g_guiSettings.GetInt(!m_bAudio2 ? "audiooutput.mode" : "audiooutput2.mode");
   if (audioMode == AUDIO_HDMI)
-    m_bLpcmMode = g_guiSettings.GetBool("audiooutput.multichannellpcm");
+    m_bLpcmMode = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.multichannellpcm" : "audiooutput2.multichannellpcm");
 #endif
 
   m_pCodecContext = m_dllAvCodec.avcodec_alloc_context3(pCodec);

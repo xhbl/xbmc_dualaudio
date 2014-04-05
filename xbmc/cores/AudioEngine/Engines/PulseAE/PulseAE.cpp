@@ -82,6 +82,7 @@ CPulseAE::CPulseAE()
   m_MainLoop = NULL;
   m_muted = false;
   m_Volume = 0.0f;
+  m_bDumb = true;
 }
 
 CPulseAE::~CPulseAE()
@@ -172,6 +173,7 @@ bool CPulseAE::Initialize()
   }
 
   pa_threaded_mainloop_unlock(m_MainLoop);
+  m_bDumb = false;
   return true;
 }
 
@@ -218,6 +220,7 @@ void CPulseAE::SetVolume(float volume)
 IAEStream *CPulseAE::MakeStream(enum AEDataFormat dataFormat, unsigned int sampleRate, unsigned int encodedSampleRate,CAEChannelInfo channelLayout, unsigned int options)
 {
   CPulseAEStream *st = new CPulseAEStream(m_Context, m_MainLoop, dataFormat, sampleRate, channelLayout, options);
+  st->SetAudio2(m_bAudio2);
 
   CSingleLock lock(m_lock);
   m_streams.push_back(st);
@@ -257,6 +260,7 @@ IAESound *CPulseAE::MakeSound(const std::string& file)
   CSingleLock lock(m_lock);
 
   CPulseAESound *sound = new CPulseAESound(file, m_Context, m_MainLoop);
+  sound->SetAudio2(m_bAudio2);
   if (!sound->Initialize())
   {
     delete sound;

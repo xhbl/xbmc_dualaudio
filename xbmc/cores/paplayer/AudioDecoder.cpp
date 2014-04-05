@@ -35,6 +35,8 @@ CAudioDecoder::CAudioDecoder()
 
   m_status = STATUS_NO_FILE;
   m_canPlay = false;
+
+  m_bAudio2 = false;
 }
 
 CAudioDecoder::~CAudioDecoder()
@@ -76,6 +78,7 @@ bool CAudioDecoder::Create(const CFileItem &file, int64_t seekOffset)
 
   // create our codec
   m_codec=CodecFactory::CreateCodecDemux(file.GetPath(), file.GetMimeType(), filecache * 1024);
+  m_codec->SetAudio2(m_bAudio2);
 
   if (!m_codec || !m_codec->Init(file.GetPath(), filecache * 1024))
   {

@@ -43,6 +43,7 @@ public:
     m_Channels = 0;
     m_Bitrate = 0;
     m_CodecName = "";
+	m_bAudio2 = false;
   };
   virtual ~ICodec() {};
 
@@ -107,8 +108,12 @@ public:
   MUSIC_INFO::CMusicInfoTag m_tag;
   XFILE::CFile m_file;
 
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
+  bool IsAudio2() { return m_bAudio2; }
+
 protected:
   int m_Channels; /* remove this soon, its being deprecated */
 
+  bool m_bAudio2;
 };
 

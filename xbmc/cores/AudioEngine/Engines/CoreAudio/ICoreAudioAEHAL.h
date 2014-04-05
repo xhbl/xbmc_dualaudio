@@ -32,7 +32,8 @@ class CAUOutputDevice;
 class ICoreAudioAEHAL
 {
 protected:
-  ICoreAudioAEHAL() {}
+  bool m_bAudio2;
+  ICoreAudioAEHAL() { m_bAudio2 = false; }
   virtual ~ICoreAudioAEHAL() {}
 
 public:
@@ -46,4 +47,6 @@ public:
   virtual bool   Start() = 0;
   virtual double GetDelay() = 0;
   virtual void   SetVolume(float volume) = 0;
+
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
 };

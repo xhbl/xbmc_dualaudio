@@ -41,7 +41,7 @@ CDVDAudioCodecPassthrough::~CDVDAudioCodecPassthrough(void)
 bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
   /* dont open if AE doesnt support RAW */
-  if (!CAEFactory::SupportsRaw())
+  if (!CAEFactory::SupportsRaw(m_bAudio2))
     return false;
 
   bool bSupportsAC3Out    = false;
@@ -49,17 +49,17 @@ bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
   bool bSupportsTrueHDOut = false;
   bool bSupportsDTSHDOut  = false;
 
-  int audioMode = g_guiSettings.GetInt("audiooutput.mode");
+  int audioMode = g_guiSettings.GetInt(!m_bAudio2 ? "audiooutput.mode" : "audiooutput2.mode");
   if (AUDIO_IS_BITSTREAM(audioMode))
   {
-    bSupportsAC3Out = g_guiSettings.GetBool("audiooutput.ac3passthrough");
-    bSupportsDTSOut = g_guiSettings.GetBool("audiooutput.dtspassthrough");
+    bSupportsAC3Out = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.ac3passthrough" : "audiooutput2.ac3passthrough");
+    bSupportsDTSOut = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.dtspassthrough" : "audiooutput2.dtspassthrough");
   }
 
   if (audioMode == AUDIO_HDMI)
   {
-    bSupportsTrueHDOut = g_guiSettings.GetBool("audiooutput.truehdpassthrough");
-    bSupportsDTSHDOut  = g_guiSettings.GetBool("audiooutput.dtshdpassthrough" ) && bSupportsDTSOut;
+    bSupportsTrueHDOut = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.truehdpassthrough" : "audiooutput2.truehdpassthrough");
+    bSupportsDTSHDOut  = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.dtshdpassthrough" : "audiooutput2.dtshdpassthrough" ) && bSupportsDTSOut;
   }
 
   /* only get the dts core from the parser if we don't support dtsHD */

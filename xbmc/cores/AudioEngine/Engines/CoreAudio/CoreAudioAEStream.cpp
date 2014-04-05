@@ -36,7 +36,7 @@
 
 
 // typecast AE to CCoreAudioAE
-#define AE (*(CCoreAudioAE*)CAEFactory::GetEngine())
+#define AE (*(CCoreAudioAE*)CAEFactory::GetEngine(m_bAudio2))
 
 void CheckOutputBufferSize(void **buffer, int *oldSize, int newSize)
 {
@@ -175,6 +175,8 @@ void CCoreAudioAEStream::InitializeRemap()
       m_OutputBytesPerSample    = (CAEUtil::DataFormatToBits(m_OutputFormat.m_dataFormat) >> 3);
 
       // re-init the remappers
+      m_remap.SetAudio2(m_bAudio2);
+      m_vizRemap.SetAudio2(m_bAudio2);
       m_remap   .Initialize(m_StreamFormat.m_channelLayout, m_OutputFormat.m_channelLayout, false);
       m_vizRemap.Initialize(m_StreamFormat.m_channelLayout, CAEChannelInfo(AE_CH_LAYOUT_2_0), false, true);
 
@@ -259,6 +261,7 @@ void CCoreAudioAEStream::Initialize()
 
   if (!m_isRaw)
   {
+    m_remap.SetAudio2(m_bAudio2);
     if (!m_remap.Initialize(m_StreamFormat.m_channelLayout, m_OutputFormat.m_channelLayout, false))
     {
       m_valid = false;
@@ -270,6 +273,7 @@ void CCoreAudioAEStream::Initialize()
 
   if (!m_isRaw)
   {
+    m_vizRemap.SetAudio2(m_bAudio2);
     if (!m_vizRemap.Initialize(m_OutputFormat.m_channelLayout, CAEChannelInfo(AE_CH_LAYOUT_2_0), false, true))
     {
       m_valid = false;

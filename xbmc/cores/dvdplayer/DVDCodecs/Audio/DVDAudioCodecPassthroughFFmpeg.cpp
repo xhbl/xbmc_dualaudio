@@ -287,14 +287,14 @@ bool CDVDAudioCodecPassthroughFFmpeg::SupportsFormat(CDVDStreamInfo &hints)
 
 bool CDVDAudioCodecPassthroughFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
 {
-  int audioMode = g_guiSettings.GetInt("audiooutput.mode");
+  int audioMode = g_guiSettings.GetInt(!m_bAudio2 ? "audiooutput.mode" : "audiooutput2.mode");
 
   // TODO - move this stuff somewhere else
   if (AUDIO_IS_BITSTREAM(audioMode))
   {
-    m_bSupportsAC3Out = g_guiSettings.GetBool("audiooutput.ac3passthrough");
-    m_bSupportsDTSOut = g_guiSettings.GetBool("audiooutput.dtspassthrough");
-    m_bSupportsAACOut = g_guiSettings.GetBool("audiooutput.passthroughaac");
+    m_bSupportsAC3Out = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.ac3passthrough" : "audiooutput2.ac3passthrough");
+    m_bSupportsDTSOut = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.dtspassthrough" : "audiooutput2.dtspassthrough");
+    m_bSupportsAACOut = g_guiSettings.GetBool(!m_bAudio2 ? "audiooutput.passthroughaac" : "audiooutput2.passthroughaac");
   }
   else
     return false;

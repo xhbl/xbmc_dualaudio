@@ -90,6 +90,7 @@ public:
   virtual void      SetVolume(float volume);
   virtual void      SetMute(const bool enabled);
   virtual bool      IsMuted();
+  virtual bool      IsDumb();
   virtual void      SetSoundMode(const int mode);
 
 
@@ -167,6 +168,7 @@ private:
   OSStatus          OnRender(AudioUnitRenderActionFlags *actionFlags,
                       const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber,
                       UInt32 inNumberFrames, AudioBufferList *ioData);
+  void              OnSettingsChange2(const std::string& setting);
 
   float             m_volume;
   float             m_volumeBeforeMute;

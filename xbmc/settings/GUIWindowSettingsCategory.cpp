@@ -570,6 +570,18 @@ void CGUIWindowSettingsCategory::CreateSettings()
       FillInAudioDevices(pSetting,true);
       continue;
     }
+    else if (strSetting.Equals("audiooutput2.audiodevice"))
+    {
+      AddSetting(pSetting, group->GetWidth(), iControlID);
+      FillInAudioDevices(pSetting,false,true);
+      continue;
+    }
+    else if (strSetting.Equals("audiooutput2.passthroughdevice"))
+    {
+      AddSetting(pSetting, group->GetWidth(), iControlID);
+      FillInAudioDevices(pSetting,true,true);
+      continue;
+    }
     AddSetting(pSetting, group->GetWidth(), iControlID);
   }
 
@@ -781,6 +793,39 @@ void CGUIWindowSettingsCategory::UpdateSettings()
           pControl->SetEnabled(false);
         else
           pControl->SetEnabled(g_guiSettings.GetInt("audiooutput.mode") == AUDIO_HDMI);
+      }
+    }
+    else if (
+             strSetting.Equals("audiooutput2.channels") ||
+             strSetting.Equals("audiooutput2.normalizelevels") ||
+             strSetting.Equals("audiooutput2.stereoupmix") ||
+             strSetting.Equals("audiooutput2.audiodevice") ||
+             strSetting.Equals("audiooutput2.guisoundmode"))
+    { // only visible if audioouput2 is used
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (pControl) pControl->SetEnabled(g_guiSettings.GetInt("audiooutput2.mode") != AUDIO_NONE);
+    }
+    else if (
+             strSetting.Equals("audiooutput2.passthroughdevice") ||
+             strSetting.Equals("audiooutput2.ac3passthrough") ||
+             strSetting.Equals("audiooutput2.dtspassthrough") ||
+             strSetting.Equals("audiooutput2.passthroughaac"))
+    { // only visible if we are in digital mode
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (pControl) pControl->SetEnabled(AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput2.mode")));
+    }
+    else if (
+             strSetting.Equals("audiooutput2.multichannellpcm" ) ||
+             strSetting.Equals("audiooutput2.truehdpassthrough") ||
+             strSetting.Equals("audiooutput2.dtshdpassthrough" ))
+    {
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (pControl)
+      {
+        if (strSetting.Equals("audiooutput2.dtshdpassthrough") && !g_guiSettings.GetBool("audiooutput2.dtspassthrough"))
+          pControl->SetEnabled(false);
+        else
+          pControl->SetEnabled(g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_HDMI);
       }
     }
     else if (strSetting.Equals("musicplayer.crossfadealbumtracks"))
@@ -1991,6 +2036,37 @@ void CGUIWindowSettingsCategory::OnSettingChanged(BaseSettingControlPtr pSetting
 
     CAEFactory::OnSettingsChange(strSetting);
   }
+  else if (strSetting.compare(0, 13, "audiooutput2.") == 0)
+  {
+    if (strSetting.Equals("audiooutput2.audiodevice"))
+    {
+      CGUISpinControlEx *pControl = (CGUISpinControlEx *)GetControl(pSettingControl->GetID());
+#if defined(TARGET_DARWIN)
+      // save the sinkname - since we don't have sinks on osx
+      // we need to get the fitting sinkname for the device label from the
+      // factory
+      std::string label2sink = pControl->GetCurrentLabel();
+      CAEFactory::VerifyOutputDevice(label2sink, false);
+      g_guiSettings.SetString("audiooutput2.audiodevice", label2sink.c_str());
+#else
+      g_guiSettings.SetString("audiooutput2.audiodevice", m_AnalogAudioSinkMap[pControl->GetCurrentLabel()]);
+#endif
+	  }
+#if !defined(TARGET_DARWIN)
+    else if (strSetting.Equals("audiooutput2.passthroughdevice"))
+    {
+      CGUISpinControlEx *pControl = (CGUISpinControlEx *)GetControl(pSettingControl->GetID());
+      g_guiSettings.SetString("audiooutput2.passthroughdevice", m_DigitalAudioSinkMap[pControl->GetCurrentLabel()]);
+    }
+#endif
+    else if (strSetting.Equals("audiooutput2.guisoundmode"))
+    {
+      CAEFactory::SetSoundMode(g_guiSettings.GetInt("audiooutput2.guisoundmode"),true);
+    }
+  
+    CAEFactory::OnSettingsChange(strSetting,true);
+    g_audioManager.CheckAudio2();
+  }
   else if (strSetting.Equals("pvrparental.enabled"))
   {
     if (g_guiSettings.GetBool("pvrparental.enabled") && g_guiSettings.GetString("pvrparental.pin").GetLength() == 0)
@@ -2869,12 +2945,16 @@ void CGUIWindowSettingsCategory::FillInPvrStartLastChannel(CSetting *pSetting)
   pControl->SetValue(pSettingInt->GetData());
 }
 
-void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Passthrough)
+void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Passthrough, bool bAudio2)
 {
   CGUISpinControlEx *pControl = (CGUISpinControlEx *)GetControl(GetSetting(pSetting->GetSetting())->GetID());
   pControl->Clear();
 
-  CStdString currentDevice = Passthrough ? g_guiSettings.GetString("audiooutput.passthroughdevice") : g_guiSettings.GetString("audiooutput.audiodevice");
+  CStdString currentDevice;
+  if(!bAudio2)
+    currentDevice = Passthrough ? g_guiSettings.GetString("audiooutput.passthroughdevice") : g_guiSettings.GetString("audiooutput.audiodevice");
+  else
+    currentDevice = Passthrough ? g_guiSettings.GetString("audiooutput2.passthroughdevice") : g_guiSettings.GetString("audiooutput2.audiodevice");
 
   if (Passthrough)
   {
@@ -2889,7 +2969,7 @@ void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Pas
 
   int selectedValue = -1;
   AEDeviceList sinkList;
-  CAEFactory::EnumerateOutputDevices(sinkList, Passthrough);
+  CAEFactory::EnumerateOutputDevices(sinkList, Passthrough, bAudio2);
 #if !defined(TARGET_DARWIN)
   if (sinkList.size()==0)
   {

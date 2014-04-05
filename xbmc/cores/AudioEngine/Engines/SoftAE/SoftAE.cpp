@@ -36,6 +36,7 @@
 #include "SoftAESound.h"
 #include "SoftAEStream.h"
 #include "AESinkFactory.h"
+#include "AEFactory.h"
 #include "Interfaces/AESink.h"
 #include "Utils/AEUtil.h"
 #include "Encoders/AEEncoderFFmpeg.h"
@@ -87,6 +88,7 @@ CSoftAE::CSoftAE():
   }
   CLog::Log(LOGNOTICE, "Found %lu Lists of Devices", m_sinkInfoList.size());
   PrintSinks();
+  m_bDumb = true;
 }
 
 CSoftAE::~CSoftAE()
@@ -188,6 +190,7 @@ void CSoftAE::InternalCloseSink()
     delete m_sink;
     m_sink = NULL;
   }
+  m_bDumb = true;
 }
 /* this must NEVER be called from outside the main thread or Initialization */
 void CSoftAE::InternalOpenSink()
@@ -319,12 +322,16 @@ void CSoftAE::InternalOpenSink()
     /* get the display name of the device */
     GetDeviceFriendlyName(device);
 
+	m_deviceCreate = device;
+
     /* if we already have a driver, prepend it to the device string */
     if (!driver.empty())
       device = driver + ":" + device;
 
     /* create the new sink */
     m_sink = GetSink(newFormat, m_transcode || m_rawPassthrough, device);
+	if(!IsDisabled() && m_sink && std::string(m_sink->GetName())!="NULL")
+      m_bDumb = false;
 
     /* perform basic sanity checks on the format returned by the sink */
     ASSERT(newFormat.m_channelLayout.Count() > 0);
@@ -334,7 +341,7 @@ void CSoftAE::InternalOpenSink()
     ASSERT(newFormat.m_frameSize            == (CAEUtil::DataFormatToBits(newFormat.m_dataFormat) >> 3) * newFormat.m_channelLayout.Count());
     ASSERT(newFormat.m_sampleRate            > 0);
 
-    CLog::Log(LOGDEBUG, "CSoftAE::InternalOpenSink - %s Initialized:", m_sink->GetName());
+    CLog::Log(LOGDEBUG, "CSoftAE::InternalOpenSink%s - %s Initialized:", m_bAudio2 ? " 2nd" : "", m_sink->GetName());
     CLog::Log(LOGDEBUG, "  Output Device : %s", m_deviceFriendlyName.c_str());
     CLog::Log(LOGDEBUG, "  Sample Rate   : %d", newFormat.m_sampleRate);
     CLog::Log(LOGDEBUG, "  Sample Format : %s", CAEUtil::DataFormatToStr(newFormat.m_dataFormat));
@@ -493,6 +500,7 @@ bool CSoftAE::SetupEncoder(AEAudioFormat &format)
     return false;
 
   m_encoder = new CAEEncoderFFmpeg();
+  m_encoder->SetAudio2(m_bAudio2);
   if (m_encoder->Initialize(format))
     return true;
 
@@ -519,6 +527,9 @@ bool CSoftAE::Initialize()
 
 void CSoftAE::OnSettingsChange(const std::string& setting)
 {
+  if(m_bAudio2)
+    return OnSettingsChange2(setting);
+
   if (setting == "audiooutput.passthroughdevice" ||
       setting == "audiooutput.audiodevice"       ||
       setting == "audiooutput.mode"              ||
@@ -544,11 +555,41 @@ void CSoftAE::OnSettingsChange(const std::string& setting)
   }
 }
 
+void CSoftAE::OnSettingsChange2(const std::string& setting)
+{
+  if (setting == "audiooutput2.passthroughdevice" ||
+      setting == "audiooutput2.audiodevice"       ||
+      setting == "audiooutput2.mode"              ||
+      setting == "audiooutput2.ac3passthrough"    ||
+      setting == "audiooutput2.dtspassthrough"    ||
+      setting == "audiooutput2.passthroughaac"    ||
+      setting == "audiooutput2.truehdpassthrough" ||
+      setting == "audiooutput2.dtshdpassthrough"  ||
+      setting == "audiooutput2.channels"     ||
+      setting == "audiooutput2.useexclusivemode"  ||
+      setting == "audiooutput2.multichannellpcm"  ||
+      setting == "audiooutput2.stereoupmix")
+  {
+    OpenSink();
+  }
+
+  if (setting == "audiooutput2.normalizelevels" || setting == "audiooutput2.stereoupmix")
+  {
+    /* re-init stream reamppers */
+    CSingleLock streamLock(m_streamLock);
+    for (StreamList::iterator itt = m_streams.begin(); itt != m_streams.end(); ++itt)
+      (*itt)->InitializeRemap();
+  }
+}
+
 void CSoftAE::LoadSettings()
 {
   m_audiophile = g_advancedSettings.m_audioAudiophile;
   if (m_audiophile)
     CLog::Log(LOGINFO, "CSoftAE::LoadSettings - Audiophile switch enabled");
+
+  if(m_bAudio2)
+    return LoadSettings2();
 
   m_stereoUpmix = g_guiSettings.GetBool("audiooutput.stereoupmix");
   if (m_stereoUpmix)
@@ -589,6 +630,71 @@ void CSoftAE::LoadSettings()
       (g_guiSettings.GetInt("audiooutput.mode") == AUDIO_IEC958) ||
       (g_guiSettings.GetInt("audiooutput.mode") == AUDIO_HDMI && !g_guiSettings.GetBool("audiooutput.multichannellpcm"))
   );
+}
+
+void CSoftAE::LoadSettings2()
+{
+  m_stereoUpmix = g_guiSettings.GetBool("audiooutput2.stereoupmix");
+  if (m_stereoUpmix)
+    CLog::Log(LOGINFO, "CSoftAE::LoadSettings - Stereo upmix is enabled");
+
+  /* load the configuration */
+  m_stdChLayout = AE_CH_LAYOUT_2_0;
+  switch (g_guiSettings.GetInt("audiooutput2.channels"))
+  {
+    default:
+    case  0: m_stdChLayout = AE_CH_LAYOUT_2_0; break; /* dont alow 1_0 output */
+    case  1: m_stdChLayout = AE_CH_LAYOUT_2_0; break;
+    case  2: m_stdChLayout = AE_CH_LAYOUT_2_1; break;
+    case  3: m_stdChLayout = AE_CH_LAYOUT_3_0; break;
+    case  4: m_stdChLayout = AE_CH_LAYOUT_3_1; break;
+    case  5: m_stdChLayout = AE_CH_LAYOUT_4_0; break;
+    case  6: m_stdChLayout = AE_CH_LAYOUT_4_1; break;
+    case  7: m_stdChLayout = AE_CH_LAYOUT_5_0; break;
+    case  8: m_stdChLayout = AE_CH_LAYOUT_5_1; break;
+    case  9: m_stdChLayout = AE_CH_LAYOUT_7_0; break;
+    case 10: m_stdChLayout = AE_CH_LAYOUT_7_1; break;
+  }
+
+  // force optical/coax to 2.0 output channels
+  if (!m_rawPassthrough && g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_IEC958)
+    m_stdChLayout = AE_CH_LAYOUT_2_0;
+
+  /* get the output devices and ensure they exist */
+  m_device            = g_guiSettings.GetString("audiooutput2.audiodevice");
+  m_passthroughDevice = g_guiSettings.GetString("audiooutput2.passthroughdevice");
+  VerifySoundDevice(m_device           , false);
+  VerifySoundDevice(m_passthroughDevice, true );
+
+  m_transcode = (
+    g_guiSettings.GetBool("audiooutput2.ac3passthrough") /*||
+    g_guiSettings.GetBool("audiooutput2.dtspassthrough") */
+  ) && (
+      (g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_IEC958) ||
+      (g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_HDMI && !g_guiSettings.GetBool("audiooutput2.multichannellpcm"))
+  );
+
+  SetDisabled(g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE);
+  if(IsDisabled())
+  {
+    m_device = "NULL";
+    m_passthroughDevice = "NULL";
+    m_bDumb = true;
+  }
+  else
+  {
+    // avoid conflict with 1st audio
+    std::string device1 = CAEFactory::GetCreateDevice();
+    std::string device, driver;
+	device = m_device;
+    CAESinkFactory::ParseDevice(device, driver);
+	if(device == device1)
+      m_device = "NULL";
+	device = m_passthroughDevice;
+    CAESinkFactory::ParseDevice(device, driver);
+	if(device == device1)
+      m_passthroughDevice = "NULL";
+  }
 }
 
 void CSoftAE::VerifySoundDevice(std::string& device, bool passthrough)
@@ -775,6 +881,7 @@ IAEStream *CSoftAE::MakeStream(enum AEDataFormat dataFormat, unsigned int sample
 
   CSingleLock streamLock(m_streamLock);
   CSoftAEStream *stream = new CSoftAEStream(dataFormat, sampleRate, encodedSampleRate, channelLayout, options);
+  stream->SetAudio2(m_bAudio2);
   m_newStreams.push_back(stream);
   streamLock.Leave();
   // this is really needed here
@@ -787,6 +894,7 @@ IAESound *CSoftAE::MakeSound(const std::string& file)
   CSingleLock soundLock(m_soundLock);
 
   CSoftAESound *sound = new CSoftAESound(file);
+  sound->SetAudio2(m_bAudio2);
   if (!sound->Initialize())
   {
     delete sound;
@@ -1366,7 +1474,7 @@ void CSoftAE::PrintSinks()
 unsigned int CSoftAE::RunRawStreamStage(unsigned int channelCount, void *out, bool &restart)
 {
   StreamList resumeStreams;
-  static StreamList::iterator itt;
+  StreamList::iterator itt;
   CSingleLock streamLock(m_streamLock);
   /* handle playing streams */
   for (itt = m_playingStreams.begin(); itt != m_playingStreams.end(); ++itt)

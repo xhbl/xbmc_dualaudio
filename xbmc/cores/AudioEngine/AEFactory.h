@@ -33,7 +33,7 @@ enum AEEngine
 class CAEFactory
 {
 public:
-  static IAE *GetEngine();
+  static IAE *GetEngine(bool bAudio2 = false);
   static bool LoadEngine();
   static void UnLoadEngine();
   static bool StartEngine();
@@ -41,25 +41,29 @@ public:
   static bool Resume(); /** Resumes output after Suspend - re-initializes sink */
   static bool IsSuspended(); /** Returns true if output has been suspended */
   /* wrap engine interface */
-  static IAESound *MakeSound(const std::string &file);
+  static IAESound *MakeSound(const std::string &file, bool bAudio2 = false);
   static void FreeSound(IAESound *sound);
-  static void SetSoundMode(const int mode);
-  static void OnSettingsChange(std::string setting);
-  static void EnumerateOutputDevices(AEDeviceList &devices, bool passthrough);
+  static void SetSoundMode(const int mode, bool bAudio2 = false);
+  static void OnSettingsChange(std::string setting, bool bAudio2 = false);
+  static void EnumerateOutputDevices(AEDeviceList &devices, bool passthrough, bool bAudio2 = false);
   static void VerifyOutputDevice(std::string &device, bool passthrough);
-  static std::string GetDefaultDevice(bool passthrough);
-  static bool SupportsRaw();
+  static std::string GetDefaultDevice(bool passthrough, bool bAudio2 = false);
+  static std::string GetCreateDevice(bool bAudio2 = false);
+  static bool SupportsRaw(bool bAudio2 = false);
   static void SetMute(const bool enabled);
   static bool IsMuted();
+  static bool IsDumb(bool bAudio2 = false);
   static float GetVolume();
   static void SetVolume(const float volume);
   static void Shutdown();
   static IAEStream *MakeStream(enum AEDataFormat dataFormat, unsigned int sampleRate, 
-    unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options = 0);
+    unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options = 0, bool bAudio2 = false);
   static IAEStream *FreeStream(IAEStream *stream);
   static void GarbageCollect();
+  static bool IsDualAudioBetaExpired();
 private:
   static bool LoadEngine(enum AEEngine engine);
   static IAE *AE;
+  static IAE *AE2;
 };
 
