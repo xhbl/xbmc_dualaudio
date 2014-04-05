@@ -70,13 +70,13 @@ void CDVDAudio::UnRegisterAudioCallback()
   m_pCallback = NULL;
 }
 
-bool CDVDAudio::Create(const DVDAudioFrame &audioframe, CodecID codec)
+bool CDVDAudio::Create(const DVDAudioFrame &audioframe, CodecID codec, bool bAudio2/* = false*/)
 {
   CLog::Log(LOGNOTICE, "Creating audio device with codec id: %i, channels: %i, sample rate: %i, %s", codec, audioframe.channels, audioframe.sample_rate, audioframe.passthrough ? "pass-through" : "no pass-through");
 
   // if passthrough isset do something else
   CSingleLock lock (m_critSection);
-  m_pAudioDecoder = CAudioRendererFactory::Create(m_pCallback, audioframe.channels, audioframe.channel_map, audioframe.sample_rate, audioframe.bits_per_sample, false, false, audioframe.passthrough);
+  m_pAudioDecoder = CAudioRendererFactory::Create(m_pCallback, audioframe.channels, audioframe.channel_map, audioframe.sample_rate, audioframe.bits_per_sample, false, false, audioframe.passthrough, bAudio2);
 
   if (!m_pAudioDecoder) return false;
 

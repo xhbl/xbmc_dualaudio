@@ -63,7 +63,7 @@ protected:
   void FillInNetworkInterfaces(CSetting *pSetting);
   void NetworkInterfaceChanged(void);
 
-  void FillInAudioDevices(CSetting* pSetting, bool Passthrough = false);
+  void FillInAudioDevices(CSetting* pSetting, bool Passthrough = false, bool bAudio2 = false);
 
   virtual void SetupControls();
   void CreateSettings();

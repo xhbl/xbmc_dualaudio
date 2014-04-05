@@ -41,6 +41,11 @@ void CNullDirectSound::DoWork()
 CNullDirectSound::CNullDirectSound()
 {
 }
+CNullDirectSound::CNullDirectSound(bool bAudio2)
+{
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
 bool CNullDirectSound::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, bool bPassthrough)
 {
   CLog::Log(LOGERROR,"Creating a Null Audio Renderer, Check your audio settings as this should not happen");
@@ -48,10 +53,21 @@ bool CNullDirectSound::Initialize(IAudioCallback* pCallback, const CStdString& d
     iChannels = 2;
 
   bool bAudioOnAllSpeakers(false);
-  g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
-  g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  if (!m_bAudio2)
+  {
+    g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
 
-  g_application.m_guiDialogKaiToast.QueueNotification(CGUIDialogKaiToast::Error, "Failed to initialize audio device", "Check your audiosettings", TOAST_DISPLAY_TIME, false);
+    g_application.m_guiDialogKaiToast.QueueNotification(CGUIDialogKaiToast::Error, "Failed to initialize audio device", "Check your audiosettings", TOAST_DISPLAY_TIME, false);
+  }
+  else
+  {
+    g_audioContext2.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+
+    g_application.m_guiDialogKaiToast.QueueNotification(CGUIDialogKaiToast::Error, "Failed to initialize 2nd audio device", "Check your audiosettings", TOAST_DISPLAY_TIME, false);
+  }
+
   m_timePerPacket = 1.0f / (float)(iChannels*(uiBitsPerSample/8) * uiSamplesPerSec);
   m_packetsSent = 0;
   m_paused = 0;
@@ -69,7 +85,10 @@ CNullDirectSound::~CNullDirectSound()
 //***********************************************************************************************
 bool CNullDirectSound::Deinitialize()
 {
-  g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  if (!m_bAudio2)
+    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  else
+    g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
   return true;
 }
 

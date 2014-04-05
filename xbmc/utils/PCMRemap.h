@@ -90,6 +90,7 @@ protected:
   int                m_inStride, m_outStride;
   struct PCMMapInfo  m_lookupMap[PCM_MAX_CH + 1][PCM_MAX_CH + 1];
   int                m_counts[PCM_MAX_CH];
+  bool               m_bAudio2;
 
   struct PCMMapInfo* ResolveChannel(enum PCMChannels channel, float level, bool ifExists, std::vector<enum PCMChannels> path, struct PCMMapInfo *tablePtr);
   void               ResolveChannels(); //!< Partial BuildMap(), just enough to see which output channels are active
@@ -111,6 +112,7 @@ public:
   int  InBytesToFrames (int bytes );
   int  FramesToOutBytes(int frames);
   int  FramesToInBytes (int frames);
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; };
 };
 
 #endif

@@ -22,6 +22,8 @@
 #include "GUIListItem.h"
 #include "GUIListItemLayout.h"
 #include "utils/Archive.h"
+#include "utils/CharsetConverter.h"
+#include "utils/Variant.h"
 
 CGUIListItem::CGUIListItem(const CGUIListItem& item)
 {
@@ -49,7 +51,7 @@ CGUIListItem::CGUIListItem(const CStdString& strLabel)
   m_bIsFolder = false;
   m_strLabel2 = "";
   m_strLabel = strLabel;
-  m_sortLabel = strLabel;
+  SetSortLabel(strLabel);
   m_bSelected = false;
   m_strIcon = "";
   m_strThumbnailImage = "";
@@ -69,7 +71,7 @@ void CGUIListItem::SetLabel(const CStdString& strLabel)
     return;
   m_strLabel = strLabel;
   if (m_sortLabel.IsEmpty())
-    m_sortLabel = strLabel;
+    SetSortLabel(strLabel);
   SetInvalid();
 }
 
@@ -94,11 +96,11 @@ const CStdString& CGUIListItem::GetLabel2() const
 
 void CGUIListItem::SetSortLabel(const CStdString &label)
 {
-  m_sortLabel = label;
+  g_charsetConverter.utf8ToW(label, m_sortLabel);
   // no need to invalidate - this is never shown in the UI
 }
 
-const CStdString& CGUIListItem::GetSortLabel() const
+const CStdStringW& CGUIListItem::GetSortLabel() const
 {
   return m_sortLabel;
 }

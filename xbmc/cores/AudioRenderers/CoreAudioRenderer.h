@@ -102,6 +102,7 @@ class CCoreAudioRenderer : public IAudioRenderer
   {
   public:
     CCoreAudioRenderer();
+    CCoreAudioRenderer(bool bAudio2);
     virtual ~CCoreAudioRenderer();
     virtual unsigned int GetChunkLen();
     virtual float GetDelay();

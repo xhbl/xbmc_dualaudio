@@ -47,6 +47,7 @@ public:
   virtual float GetCacheTime();
   virtual float GetCacheTotal();
   CPulseAudioDirectSound();
+  CPulseAudioDirectSound(bool bAudio2);
   virtual bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic=false, bool bPassthrough = false);
   virtual ~CPulseAudioDirectSound();
 

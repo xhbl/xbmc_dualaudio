@@ -3965,8 +3965,8 @@ CStdString CGUIInfoManager::GetItemLabel(const CFileItem *item, int info) const
     break;
   case LISTITEM_SORT_LETTER:
     {
-      CStdString letter = g_charsetConverter.utf8Left(item->GetSortLabel(), 1);
-      letter.ToUpper();
+      CStdString letter;
+      g_charsetConverter.wToUTF8(item->GetSortLabel().Left(1).ToUpper(), letter);
       return letter;
     }
     break;

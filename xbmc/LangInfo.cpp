@@ -20,6 +20,7 @@
  */
 
 #include "LangInfo.h"
+#include "LangCodeExpander.h"
 #include "AdvancedSettings.h"
 #include "GUISettings.h"
 #include "LocalizeStrings.h"
@@ -43,6 +44,8 @@ CLangInfo::CRegion::CRegion(const CRegion& region)
   m_strDVDMenuLanguage=region.m_strDVDMenuLanguage;
   m_strDVDAudioLanguage=region.m_strDVDAudioLanguage;
   m_strDVDSubtitleLanguage=region.m_strDVDSubtitleLanguage;
+  m_strLangLocaleName = region.m_strLangLocaleName;
+  m_strRegionLocaleName = region.m_strRegionLocaleName;
 
   m_strDateFormatShort=region.m_strDateFormatShort;
   m_strDateFormatLong=region.m_strDateFormatLong;
@@ -74,6 +77,7 @@ void CLangInfo::CRegion::SetDefaults()
   m_strDVDMenuLanguage="en";
   m_strDVDAudioLanguage="en";
   m_strDVDSubtitleLanguage="en";
+  m_strLangLocaleName = "English";
 
   m_strDateFormatShort="DD/MM/YYYY";
   m_strDateFormatLong="DDDD, D MMMM YYYY";
@@ -136,6 +140,43 @@ void CLangInfo::CRegion::SetTimeZone(const CStdString& strTimeZone)
   m_strTimeZone = strTimeZone;
 }
 
+// set the locale associated with this region global. This affects string
+// sorting & transformations
+void CLangInfo::CRegion::SetGlobalLocale()
+{
+  CStdString strLocale;
+  if (m_strRegionLocaleName.length() > 0)
+  {
+    strLocale = m_strLangLocaleName + "_" + m_strRegionLocaleName;
+#ifdef _LINUX
+    strLocale += ".UTF-8";
+#endif
+  }
+
+  CLog::Log(LOGDEBUG, "trying to set locale to %s", strLocale.c_str());
+
+  // We need to set the locale to only change the collate. Otherwise,
+  // decimal separator is changed depending of the current language
+  // (ie. "," in French or Dutch instead of "."). This breaks atof() and
+  // others similar functions.
+  locale current_locale = locale::classic(); // C-Locale
+  try
+  {
+    locale lcl = locale(strLocale);
+    strLocale = lcl.name();
+    current_locale = current_locale.combine< collate<wchar_t> >(lcl);
+
+    assert(use_facet< numpunct<char> >(current_locale).decimal_point() == '.');
+
+  } catch(...) {
+    current_locale = locale::classic();
+    strLocale = "C";
+  }
+
+  locale::global(current_locale);
+  CLog::Log(LOGINFO, "global locale set to %s", strLocale.c_str());
+}
+
 CLangInfo::CLangInfo()
 {
   SetDefaults();
@@ -163,6 +204,18 @@ bool CLangInfo::Load(const CStdString& strFileName)
     CLog::Log(LOGERROR, "%s Doesn't contain <language>", strFileName.c_str());
     return false;
   }
+
+  if (pRootElement->Attribute("locale"))
+    m_defaultRegion.m_strLangLocaleName = pRootElement->Attribute("locale");
+
+#ifdef _WIN32
+  // Windows need 3 chars isolang code
+  if (m_defaultRegion.m_strLangLocaleName.length() == 2)
+  {
+    if (! g_LangCodeExpander.ConvertTwoToThreeCharCode(m_defaultRegion.m_strLangLocaleName, m_defaultRegion.m_strLangLocaleName, true))
+      m_defaultRegion.m_strLangLocaleName = "";
+  }
+#endif
 
   const TiXmlNode *pCharSets = pRootElement->FirstChild("charsets");
   if (pCharSets && !pCharSets->NoChildren())
@@ -209,6 +262,18 @@ bool CLangInfo::Load(const CStdString& strFileName)
       region.m_strName=pRegion->Attribute("name");
       if (region.m_strName.IsEmpty())
         region.m_strName="N/A";
+
+      if (pRegion->Attribute("locale"))
+        region.m_strRegionLocaleName = pRegion->Attribute("locale");
+
+#ifdef _WIN32
+      // Windows need 3 chars regions code
+      if (region.m_strRegionLocaleName.length() == 2)
+      {
+        if (! g_LangCodeExpander.ConvertLinuxToWindowsRegionCodes(region.m_strRegionLocaleName, region.m_strRegionLocaleName))
+          region.m_strRegionLocaleName = "";
+      }
+#endif
 
       const TiXmlNode *pDateLong=pRegion->FirstChild("datelong");
       if (pDateLong && !pDateLong->NoChildren())
@@ -323,6 +388,16 @@ const CStdString& CLangInfo::GetDVDSubtitleLanguage() const
   return m_currentRegion->m_strDVDSubtitleLanguage;
 }
 
+const CStdString& CLangInfo::GetLanguageLocale() const
+{
+  return m_currentRegion->m_strLangLocaleName;
+}
+
+const CStdString& CLangInfo::GetRegionLocale() const
+{
+  return m_currentRegion->m_strRegionLocaleName;
+}
+
 // Returns the format string for the date of the current language
 const CStdString& CLangInfo::GetDateFormat(bool bLongDate/*=false*/) const
 {
@@ -372,6 +447,8 @@ void CLangInfo::SetCurrentRegion(const CStdString& strName)
     m_currentRegion=&m_regions.begin()->second;
   else
     m_currentRegion=&m_defaultRegion;
+
+  m_currentRegion->SetGlobalLocale();
 }
 
 // Returns the current region set for this language

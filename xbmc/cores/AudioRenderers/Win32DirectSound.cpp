@@ -80,6 +80,20 @@ CWin32DirectSound::CWin32DirectSound() :
 {
 }
 
+CWin32DirectSound::CWin32DirectSound(bool bAudio2) :
+  m_Passthrough(false),
+  m_AvgBytesPerSec(0),
+  m_CacheLen(0),
+  m_dwChunkSize(0),
+  m_dwDataChunkSize(0),
+  m_dwBufferLen(0),
+  m_PreCacheSize(0),
+  m_LastCacheCheck(0)
+{
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
+
 bool CWin32DirectSound::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels* channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, bool bAudioPassthrough)
 {
   m_uiDataChannels = iChannels;
@@ -99,12 +113,24 @@ bool CWin32DirectSound::Initialize(IAudioCallback* pCallback, const CStdString& 
   }
 
   bool bAudioOnAllSpeakers(false);
-  g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
-  if(bAudioPassthrough)
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+  if (!m_bAudio2)
+  {
+    g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    if(bAudioPassthrough)
+      g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+    else
+      g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+    m_pDSound=g_audioContext.GetDirectSoundDevice();
+  }
   else
-    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
-  m_pDSound=g_audioContext.GetDirectSoundDevice();
+  {
+    g_audioContext2.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    if(bAudioPassthrough)
+      g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE_DIGITAL);
+    else
+      g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+    m_pDSound=g_audioContext2.GetDirectSoundDevice();
+  }
 
   m_bPause = false;
   m_bIsAllocated = false;
@@ -243,7 +269,10 @@ bool CWin32DirectSound::Deinitialize()
     m_dwChunkSize = 0;
     m_dwBufferLen = 0;
 
-    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+    if (!m_bAudio2)
+      g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+    else
+      g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
   }
   return true;
 }

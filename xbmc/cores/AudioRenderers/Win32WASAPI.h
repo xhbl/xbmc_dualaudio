@@ -40,6 +40,7 @@ class CWin32WASAPI : public IAudioRenderer
 {
 public:
   CWin32WASAPI();
+  CWin32WASAPI(bool bAudio2);
   virtual ~CWin32WASAPI();
   virtual void UnRegisterAudioCallback();
   virtual void RegisterAudioCallback(IAudioCallback* pCallback);

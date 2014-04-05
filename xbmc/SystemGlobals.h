@@ -33,6 +33,7 @@
 struct CSystemGlobals
 {
   // Classes that must be initialized/destructed in a specific order because of dependencies.
+  CSystemGlobals() : m_audioContext2(true) {}
 
   CGUISettings m_guiSettings;
 
@@ -55,6 +56,7 @@ struct CSystemGlobals
   CGUILargeTextureManager m_largeTextureManager;
   CXBMCRenderManager m_renderManager;
   CAudioContext      m_audioContext;
+  CAudioContext      m_audioContext2;
   CGraphicContext    m_graphicsContext;
   CMouseStat         m_Mouse;
   CApplication       m_application;

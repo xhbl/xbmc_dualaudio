@@ -85,6 +85,23 @@ CWin32WASAPI::CWin32WASAPI() :
   m_pDevice(NULL)
 {
 }
+  
+CWin32WASAPI::CWin32WASAPI(bool bAudio2) :
+  m_bPassthrough(false),
+  m_uiAvgBytesPerSec(0),
+  m_CacheLen(0),
+  m_uiChunkSize(0),
+  m_uiSrcChunkSize(0),
+  m_uiBufferLen(0),
+  m_PreCacheSize(0),
+  m_LastCacheCheck(0),
+  m_pAudioClient(NULL),
+  m_pRenderClient(NULL),
+  m_pDevice(NULL)
+{
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
 
 bool CWin32WASAPI::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, bool bAudioPassthrough)
 {
@@ -180,7 +197,10 @@ bool CWin32WASAPI::Initialize(IAudioCallback* pCallback, const CStdString& devic
   IMMDeviceCollection* pEnumDevices = NULL;
 
   //Shut down Directsound.
-  g_audioContext.SetActiveDevice(CAudioContext::NONE);
+  if (!m_bAudio2)
+    g_audioContext.SetActiveDevice(CAudioContext::NONE);
+  else
+    g_audioContext2.SetActiveDevice(CAudioContext::NONE);
 
   HRESULT hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pEnumerator);
   EXIT_ON_FAILURE(hr, __FUNCTION__": Could not allocate WASAPI device enumerator. CoCreateInstance error code: %i", hr)
@@ -289,7 +309,10 @@ failed:
   SAFE_RELEASE(m_pDevice);
 
   //Restart Directsound
-  g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  if (!m_bAudio2)
+    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  else
+    g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
 
   return false;
 }
@@ -320,7 +343,10 @@ bool CWin32WASAPI::Deinitialize()
     m_bIsAllocated = false;
 
     //Restart Directsound for the interface sounds.
-    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+    if (!m_bAudio2)
+      g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+    else
+      g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
   }
   return true;
 }

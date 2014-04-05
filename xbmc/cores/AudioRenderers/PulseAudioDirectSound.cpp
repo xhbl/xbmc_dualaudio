@@ -144,6 +144,12 @@ CPulseAudioDirectSound::CPulseAudioDirectSound()
 {
 }
 
+CPulseAudioDirectSound::CPulseAudioDirectSound(bool bAudio2)
+{
+  m_bAudio2 = bAudio2;
+  m_remap.SetAudio2(bAudio2);
+}
+
 bool CPulseAudioDirectSound::Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels* channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic, bool bPassthrough)
 {
   m_remap.Reset();
@@ -165,8 +171,16 @@ bool CPulseAudioDirectSound::Initialize(IAudioCallback* pCallback, const CStdStr
   }
 
   bool bAudioOnAllSpeakers(false);
-  g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
-  g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  if (!m_bAudio2)
+  {
+    g_audioContext.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    g_audioContext.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  }
+  else
+  {
+    g_audioContext2.SetupSpeakerConfig(iChannels, bAudioOnAllSpeakers, bIsMusic);
+    g_audioContext2.SetActiveDevice(CAudioContext::DIRECTSOUND_DEVICE);
+  }
 
   m_Context = NULL;
   m_Stream = NULL;
@@ -363,7 +377,10 @@ bool CPulseAudioDirectSound::Deinitialize()
     m_MainLoop = NULL;
   }
 
-  g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  if (!m_bAudio2)
+    g_audioContext.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
+  else
+    g_audioContext2.SetActiveDevice(CAudioContext::DEFAULT_DEVICE);
   return true;
 }
 

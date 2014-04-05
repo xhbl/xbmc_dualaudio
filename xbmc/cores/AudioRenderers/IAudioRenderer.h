@@ -41,7 +41,7 @@ typedef std::vector<AudioSink> AudioSinkList;
 class IAudioRenderer
 {
 public:
-  IAudioRenderer() {};
+  IAudioRenderer() { m_bAudio2= false; };
   virtual ~IAudioRenderer() {};
   virtual bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic=false, bool bPassthrough = false) = 0;
   virtual void UnRegisterAudioCallback() = 0;
@@ -69,6 +69,7 @@ public:
 
 protected:
   CPCMRemap m_remap;
+  bool m_bAudio2;
 
 private:
 };

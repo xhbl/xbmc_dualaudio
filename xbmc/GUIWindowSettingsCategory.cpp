@@ -583,6 +583,14 @@ void CGUIWindowSettingsCategory::CreateSettings()
     {
       FillInAudioDevices(pSetting,true);
     }
+    else if (strSetting.Equals("audiooutput2.audiodevice"))
+    {
+      FillInAudioDevices(pSetting,false,true);
+    }
+    else if (strSetting.Equals("audiooutput2.passthroughdevice"))
+    {
+      FillInAudioDevices(pSetting,true,true);
+    }
     else if (strSetting.Equals("videoplayer.synctype"))
     {
       CSettingInt *pSettingInt = (CSettingInt*)pSetting;
@@ -795,6 +803,26 @@ void CGUIWindowSettingsCategory::UpdateSettings()
     { // only visible if we are in digital mode
       CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
       if (pControl) pControl->SetEnabled(AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput.mode")));
+    }
+    else if (
+             strSetting.Equals("audiooutput2.channellayout") ||
+             strSetting.Equals("audiooutput2.dontnormalizelevels") ||
+             strSetting.Equals("audiooutput2.audiodevice"))
+    { // only visible if audioouput2 is used
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (pControl) pControl->SetEnabled(g_guiSettings.GetInt("audiooutput2.mode") != AUDIO_NONE);
+    }
+    else if (
+             strSetting.Equals("audiooutput2.passthroughdevice") ||
+             strSetting.Equals("audiooutput2.ac3passthrough") ||
+             strSetting.Equals("audiooutput2.dtspassthrough") ||
+             strSetting.Equals("audiooutput2.passthroughaac") ||
+             strSetting.Equals("audiooutput2.passthroughmp1") ||
+             strSetting.Equals("audiooutput2.passthroughmp2") ||
+             strSetting.Equals("audiooutput2.passthroughmp3"))
+    { // only visible if we are in digital mode
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (pControl) pControl->SetEnabled(AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput2.mode")));
     }
     else if (strSetting.Equals("musicplayer.crossfade"))
     {
@@ -1022,6 +1050,23 @@ void CGUIWindowSettingsCategory::UpdateSettings()
     {
       CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
       if (pControl) pControl->SetEnabled(g_guiSettings.GetString("audiooutput.audiodevice").Equals("custom"));
+    }
+    else if (strSetting.Equals("audiooutput2.custompassthrough"))
+    {
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput2.mode")))
+      {
+        if (pControl) pControl->SetEnabled(g_guiSettings.GetString("audiooutput2.passthroughdevice").Equals("custom"));
+      }
+      else
+      {
+        if (pControl) pControl->SetEnabled(false);
+      }
+    }
+    else if (strSetting.Equals("audiooutput2.customdevice"))
+    {
+      CGUIControl *pControl = (CGUIControl *)GetControl(pSettingControl->GetID());
+      if (pControl) pControl->SetEnabled(g_guiSettings.GetInt("audiooutput2.mode") != AUDIO_NONE && g_guiSettings.GetString("audiooutput2.audiodevice").Equals("custom"));
     }
 #endif
   }
@@ -1291,6 +1336,26 @@ void CGUIWindowSettingsCategory::OnSettingChanged(CBaseSettingControl *pSettingC
       g_guiSettings.SetString("audiooutput.passthroughdevice", m_DigitalAudioSinkMap[pControl->GetCurrentLabel()]);
 #else
       g_guiSettings.SetString("audiooutput.passthroughdevice", pControl->GetCurrentLabel());
+#endif
+  }
+#endif
+  else if (strSetting.Equals("audiooutput2.audiodevice"))
+  {
+      CGUISpinControlEx *pControl = (CGUISpinControlEx *)GetControl(pSettingControl->GetID());
+#if !defined(__APPLE__)
+      g_guiSettings.SetString("audiooutput2.audiodevice", m_AnalogAudioSinkMap[pControl->GetCurrentLabel()]);
+#else
+      g_guiSettings.SetString("audiooutput2.audiodevice", pControl->GetCurrentLabel());
+#endif
+  }
+#if defined(_LINUX)
+  else if (strSetting.Equals("audiooutput2.passthroughdevice"))
+  {
+    CGUISpinControlEx *pControl = (CGUISpinControlEx *)GetControl(pSettingControl->GetID());
+#if defined(_LINUX) && !defined(__APPLE__)
+      g_guiSettings.SetString("audiooutput2.passthroughdevice", m_DigitalAudioSinkMap[pControl->GetCurrentLabel()]);
+#else
+      g_guiSettings.SetString("audiooutput2.passthroughdevice", pControl->GetCurrentLabel());
 #endif
   }
 #endif
@@ -2776,7 +2841,7 @@ void CGUIWindowSettingsCategory::FillInNetworkInterfaces(CSetting *pSetting)
   }
 }
 
-void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Passthrough)
+void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Passthrough, bool bAudio2)
 {
 #ifdef __APPLE__
   if (Passthrough)
@@ -2797,8 +2862,16 @@ void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Pas
     CCoreAudioDevice device(deviceList.front());
     pControl->AddLabel(device.GetName(deviceName), i);
 
-    if (g_guiSettings.GetString("audiooutput.audiodevice").Equals(deviceName))
-      activeDevice = i; // Tag this one
+    if(!bAudio2)
+    {
+      if (g_guiSettings.GetString("audiooutput.audiodevice").Equals(deviceName))
+        activeDevice = i; // Tag this one
+	}
+    else
+    {
+      if (g_guiSettings.GetString("audiooutput2.audiodevice").Equals(deviceName))
+        activeDevice = i; // Tag this one
+    }
 
     deviceList.pop_front();
   }
@@ -2807,7 +2880,15 @@ void CGUIWindowSettingsCategory::FillInAudioDevices(CSetting* pSetting, bool Pas
   CGUISpinControlEx *pControl = (CGUISpinControlEx *)GetControl(GetSetting(pSetting->GetSetting())->GetID());
   pControl->Clear();
 
-  CStdString currentDevice = Passthrough ? g_guiSettings.GetString("audiooutput.passthroughdevice") : g_guiSettings.GetString("audiooutput.audiodevice");
+  CStdString currentDevice;
+  if(!bAudio2)
+  {
+    currentDevice = Passthrough ? g_guiSettings.GetString("audiooutput.passthroughdevice") : g_guiSettings.GetString("audiooutput.audiodevice");
+  }
+  else
+  {
+    currentDevice = Passthrough ? g_guiSettings.GetString("audiooutput2.passthroughdevice") : g_guiSettings.GetString("audiooutput2.audiodevice");
+  }
 
   if (Passthrough)
   {

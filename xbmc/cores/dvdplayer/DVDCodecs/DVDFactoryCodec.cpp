@@ -81,11 +81,12 @@ CDVDVideoCodec* CDVDFactoryCodec::OpenCodec(CDVDVideoCodec* pCodec, CDVDStreamIn
   return NULL;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options )
+CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options, bool bAudio2 /* = false */ )
 {
   try
   {
     CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opening", pCodec->GetName());
+    pCodec->SetAudio2(bAudio2);
     if( pCodec->Open( hints, options ) )
     {
       CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opened", pCodec->GetName());
@@ -234,7 +235,7 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec( CDVDStreamInfo &hint )
   return NULL;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool passthrough /* = true */)
+CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool passthrough /* = true */, bool bAudio2 /* = false */)
 {
   CDVDAudioCodec* pCodec = NULL;
   CDVDCodecOptions options;
@@ -242,11 +243,11 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   if (passthrough)
   {
 #if (defined(USE_LIBA52_DECODER) || defined(USE_LIBDTS_DECODER)) && !defined(WIN32)
-    pCodec = OpenCodec( new CDVDAudioCodecPassthrough(), hint, options );
+    pCodec = OpenCodec( new CDVDAudioCodecPassthrough(), hint, options, bAudio2);
     if( pCodec ) return pCodec;
 #endif
 
-    pCodec = OpenCodec( new CDVDAudioCodecPassthroughFFmpeg(), hint, options);
+    pCodec = OpenCodec( new CDVDAudioCodecPassthroughFFmpeg(), hint, options, bAudio2);
     if ( pCodec ) return pCodec;
   }
 
@@ -255,7 +256,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
 #ifdef USE_LIBA52_DECODER
   case CODEC_ID_AC3:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecLiba52(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecLiba52(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -263,7 +264,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
 #ifdef USE_LIBDTS_DECODER
   case CODEC_ID_DTS:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecLibDts(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecLibDts(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -271,7 +272,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   case CODEC_ID_MP2:
   case CODEC_ID_MP3:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecLibMad(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecLibMad(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -279,7 +280,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   case CODEC_ID_AAC:
   //case CODEC_ID_MPEG4AAC:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecLibFaad(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecLibFaad(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -302,7 +303,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
   case CODEC_ID_PCM_ALAW:
   case CODEC_ID_PCM_MULAW:
     {
-      pCodec = OpenCodec( new CDVDAudioCodecPcm(), hint, options );
+      pCodec = OpenCodec( new CDVDAudioCodecPcm(), hint, options, bAudio2 );
       if( pCodec ) return pCodec;
       break;
     }
@@ -323,7 +324,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool p
     }
   }
 
-  pCodec = OpenCodec( new CDVDAudioCodecFFmpeg(), hint, options );
+  pCodec = OpenCodec( new CDVDAudioCodecFFmpeg(), hint, options, bAudio2 );
   if( pCodec ) return pCodec;
 
   return NULL;

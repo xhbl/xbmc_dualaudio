@@ -453,6 +453,46 @@ void CGUISettings::Initialize()
   AddString(ao, "audiooutput.audiodevice", 545, "Default", SPIN_CONTROL_TEXT);
 #endif
 
+#if defined(_LINUX)
+  AddSeparator(ao, "audiooutput.sep2");
+#else
+  AddSeparator(ao, "audiooutput.sep1");
+#endif
+
+	map<int,int> audiomode2;
+	audiomode2.insert(make_pair(13106,AUDIO_NONE));
+	audiomode2.insert(make_pair(338,AUDIO_ANALOG));
+	audiomode2.insert(make_pair(339,AUDIO_IEC958));
+	audiomode2.insert(make_pair(420,AUDIO_HDMI  ));
+	AddInt(ao, "audiooutput2.mode", 337, AUDIO_NONE, audiomode2, SPIN_CONTROL_TEXT);
+  
+	map<int,int> channelLayout2;
+	for(int layout2 = 0; layout2 < PCM_MAX_LAYOUT; ++layout2)
+	  channelLayout2.insert(make_pair(34101+layout2, layout2));
+	AddInt(ao, "audiooutput2.channellayout", 34100, PCM_LAYOUT_2_0, channelLayout2, SPIN_CONTROL_TEXT);
+	AddBool(ao, "audiooutput2.dontnormalizelevels", 346, true);
+  
+	AddBool(ao, "audiooutput2.ac3passthrough", 364, true);
+	AddBool(ao, "audiooutput2.dtspassthrough", 254, true);
+	AddBool(NULL, "audiooutput2.passthroughaac", 299, false);
+	AddBool(NULL, "audiooutput2.passthroughmp1", 300, false);
+	AddBool(NULL, "audiooutput2.passthroughmp2", 301, false);
+	AddBool(NULL, "audiooutput2.passthroughmp3", 302, false);
+  
+#ifdef __APPLE__
+	AddString(ao, "audiooutput2.audiodevice", 545, "Default", SPIN_CONTROL_TEXT);
+#elif defined(_LINUX)
+	AddSeparator(ao, "audiooutput2.sep3");
+	AddString(ao, "audiooutput2.audiodevice", 545, "default", SPIN_CONTROL_TEXT);
+	AddString(ao, "audiooutput2.customdevice", 1300, "", EDIT_CONTROL_INPUT);
+	AddSeparator(ao, "audiooutput2.sep4");
+	AddString(ao, "audiooutput2.passthroughdevice", 546, "iec958", SPIN_CONTROL_TEXT);
+	AddString(ao, "audiooutput2.custompassthrough", 1301, "", EDIT_CONTROL_INPUT);
+	AddSeparator(ao, "audiooutput2.sep5");
+#elif defined(_WIN32)
+	AddString(ao, "audiooutput2.audiodevice", 545, "Default", SPIN_CONTROL_TEXT);
+#endif
+
   CSettingsCategory* in = AddCategory(4, "input", 14094);
 #ifdef __APPLE__
   map<int,int> remotemode;

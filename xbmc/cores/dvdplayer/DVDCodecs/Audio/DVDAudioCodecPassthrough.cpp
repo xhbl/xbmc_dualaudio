@@ -176,13 +176,25 @@ bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
 {
   bool bSupportsAC3Out = false;
   bool bSupportsDTSOut = false;
-  int audioMode = g_guiSettings.GetInt("audiooutput.mode");
+  int audioMode;
+  if (!m_bAudio2)
+    audioMode = g_guiSettings.GetInt("audiooutput.mode");
+  else
+    audioMode = g_guiSettings.GetInt("audiooutput2.mode");
 
   // TODO - move this stuff somewhere else
   if (AUDIO_IS_BITSTREAM(audioMode))
   {
-    bSupportsAC3Out = g_guiSettings.GetBool("audiooutput.ac3passthrough");
-    bSupportsDTSOut = g_guiSettings.GetBool("audiooutput.dtspassthrough");
+    if (!m_bAudio2)
+    {
+      bSupportsAC3Out = g_guiSettings.GetBool("audiooutput.ac3passthrough");
+      bSupportsDTSOut = g_guiSettings.GetBool("audiooutput.dtspassthrough");
+    }
+    else
+    {
+      bSupportsAC3Out = g_guiSettings.GetBool("audiooutput2.ac3passthrough");
+      bSupportsDTSOut = g_guiSettings.GetBool("audiooutput2.dtspassthrough");
+    }
   }
 
   //Samplerate cannot be checked here as we don't know it at this point in time.

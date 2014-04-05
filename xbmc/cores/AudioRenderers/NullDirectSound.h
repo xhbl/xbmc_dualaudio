@@ -41,6 +41,7 @@ public:
   virtual float GetDelay();
   virtual float GetCacheTime();
   CNullDirectSound();
+  CNullDirectSound(bool bAudio2);
   virtual bool Initialize(IAudioCallback* pCallback, const CStdString& device, int iChannels, enum PCMChannels *channelMap, unsigned int uiSamplesPerSec, unsigned int uiBitsPerSample, bool bResample, bool bIsMusic=false, bool bPassthrough = false);
   virtual ~CNullDirectSound();
 
