@@ -105,6 +105,7 @@ CDVDAudio::CDVDAudio(volatile bool &bStop)
   m_iBitrate = 0;
   m_SecondsPerByte = 0.0;
   m_bPaused = true;
+  m_bAudio2 = false;
 }
 
 CDVDAudio::~CDVDAudio()
@@ -157,6 +158,7 @@ bool CDVDAudio::Create(const DVDAudioFrame &audioframe, CodecID codec, bool need
   if (m_pAudioCallback)
     RegisterAudioCallback(m_pAudioCallback);
 
+  m_bAudio2 = bAudio2;
   return true;
 }
 

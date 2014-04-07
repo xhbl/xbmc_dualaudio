@@ -173,6 +173,64 @@ protected:
     }
   } m_decode;
 
+  struct Audio2Frames
+  {
+    Audio2Frames()
+    {
+      incr = 64*1024;
+      capa = incr;
+      data = (BYTE*)malloc(capa);
+      size = 0;
+    }
+	  
+    ~Audio2Frames()
+    {
+      if(data)
+        free(data);
+    }
+
+    void Add(DVDAudioFrame& af)
+    {
+      if(!af.data || !af.size)
+        return;
+      if(size + af.size > capa)
+      {
+        capa = ((size + af.size) / incr + 1) * incr;
+        data = (BYTE*)realloc(data, capa);
+      }
+      memcpy(data+size, af.data, af.size);
+      size += af.size;
+      af.data = data + size;
+      afs.push_back(af);
+    }
+
+    bool Merge(DVDAudioFrame& af)
+    {
+      if (!afs.size())
+        return false;
+      af = afs.front();
+      af.data = data;
+      af.size = size;
+      af.duration = 0;
+      for (std::list<DVDAudioFrame>::iterator it = afs.begin(); it != afs.end(); ++it)
+        af.duration += it->duration;
+      return true;
+    }
+
+    void Clear()
+    {
+      afs.clear();
+      size = 0;
+    }
+
+  protected:
+    BYTE*                     data;
+    unsigned int              size;
+    unsigned int              capa;
+    unsigned int              incr;
+    std::list<DVDAudioFrame>  afs;
+  } m_audio2frames;
+
   CDVDAudio m_dvdAudio; // audio output device
   CDVDAudio m_dvdAudio2; // audio output device 2
   CDVDClock* m_pClock; // dvd master clock
@@ -212,12 +270,9 @@ protected:
   double m_maxspeedadjust;
   double m_resampleratio; //resample ratio when using SYNC_RESAMPLE, used for the codec info
 
-  double m_audiodiff;
   bool   m_bAudio2;
-  bool   m_bAudio2Stuck;
-  bool   m_bAudio2Pause;
+  bool   m_bAudio2Skip;
   bool   m_bAudio2Dumb;
-  bool   m_bAudio2Synced;
-  bool   m_bAudio2Carlib;
+  double m_audiodiff;
 };
 

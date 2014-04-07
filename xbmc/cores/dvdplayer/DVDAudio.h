@@ -116,4 +116,5 @@ protected:
   IAudioCallback* m_pAudioCallback; //the viz audio callback
   //counter that will go from 0 to m_iSpeed-1 and reset, data will only be output when speedstep is 0
   //int m_iSpeedStep;
+  bool m_bAudio2;
 };
