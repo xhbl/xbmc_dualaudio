@@ -641,7 +641,7 @@ inline void PAPlayer::ProcessStreams(double &delay, double &buffer)
   for(StreamList::iterator itt = m_finishing.begin(); itt != m_finishing.end();)
   {
     StreamInfo* si = *itt;
-    if (si->m_stream->IsDrained())
+    if (si->m_stream->IsDrained() && (!m_bAudio2 || si->m_stream2->IsDrained()))
     {      
       itt = m_finishing.erase(itt);
       CAEFactory::FreeStream(si->m_stream);
