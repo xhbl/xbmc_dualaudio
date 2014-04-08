@@ -155,7 +155,7 @@ CDVDPlayerAudio::~CDVDPlayerAudio()
 
 bool CDVDPlayerAudio::OpenStream( CDVDStreamInfo &hints )
 {
-  m_bAudio2 = (g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE) ? false : !CAEFactory::IsDualAudioBetaExpired();
+  m_bAudio2 = (g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE) ? false : true;
 
   bool passthrough = AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput.mode"));
   bool passthrough2 = AUDIO_IS_BITSTREAM(g_guiSettings.GetInt("audiooutput2.mode"));

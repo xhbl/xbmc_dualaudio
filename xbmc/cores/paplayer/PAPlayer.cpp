@@ -319,7 +319,7 @@ bool PAPlayer::QueueNextFileEx(const CFileItem &file, bool fadeIn/* = true */)
 {
   StreamInfo *si = new StreamInfo();
 
-  m_bAudio2 = (g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE) ? false : !CAEFactory::IsDualAudioBetaExpired();
+  m_bAudio2 = (g_guiSettings.GetInt("audiooutput2.mode") == AUDIO_NONE) ? false : true;
 
   si->m_decoder.SetCheckAudio2(m_bAudio2);
   if (!si->m_decoder.Create(file, (file.m_lStartOffset * 1000) / 75))

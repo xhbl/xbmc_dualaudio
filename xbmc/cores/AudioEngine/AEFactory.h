@@ -60,7 +60,6 @@ public:
     unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options = 0, bool bAudio2 = false);
   static IAEStream *FreeStream(IAEStream *stream);
   static void GarbageCollect();
-  static bool IsDualAudioBetaExpired();
 private:
   static bool LoadEngine(enum AEEngine engine);
   static IAE *AE;

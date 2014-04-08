@@ -406,23 +406,3 @@ void CAEFactory::GarbageCollect()
   if(AE2)
     AE2->GarbageCollect();
 }
-
-bool CAEFactory::IsDualAudioBetaExpired()
-{
-#if 1
-  struct tm expired_date;
-  memset(&expired_date, 0, sizeof(expired_date));
-
-  expired_date.tm_year = 2014; // beta test expired date set here
-  expired_date.tm_mon = 5;
-  expired_date.tm_mday = 31;
-
-  expired_date.tm_year-=1900;
-  expired_date.tm_mon--;
-  time_t expired_time = mktime(&expired_date);
-  time_t current_time = time(NULL);
-  if(current_time > expired_time)
-  	return true;
-#endif
-  return false;
-}
