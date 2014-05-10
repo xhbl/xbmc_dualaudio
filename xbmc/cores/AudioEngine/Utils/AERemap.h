@@ -26,6 +26,7 @@ public:
   CAERemap();
   ~CAERemap();
 
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
   bool Initialize(CAEChannelInfo input, CAEChannelInfo output, bool finalStage, bool forceNormalize = false, enum AEStdChLayout stdChLayout = AE_CH_LAYOUT_INVALID);
   void Remap(float * const in, float * const out, const unsigned int frames) const;
 
@@ -51,5 +52,7 @@ private:
 
   void ResolveMix(const AEChannel from, CAEChannelInfo to);
   void BuildUpmixMatrix(const CAEChannelInfo& input, const CAEChannelInfo& output);
+
+  bool           m_bAudio2;
 };
 

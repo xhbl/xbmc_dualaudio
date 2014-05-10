@@ -66,6 +66,8 @@ public:
   float*         GetSamples();
   bool           IsCompatible(const unsigned int sampleRate, const CAEChannelInfo &channelInfo);
 
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
+
 private:
   std::string  m_filename;
   bool         m_valid;
@@ -75,5 +77,7 @@ private:
   unsigned int   m_frameCount  ,  m_outputFrameCount;
   unsigned int   m_sampleCount ,  m_outputSampleCount;
   float         *m_samples     , *m_outputSamples;
+
+  bool           m_bAudio2;
 };
 

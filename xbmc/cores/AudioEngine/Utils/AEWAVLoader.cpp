@@ -53,6 +53,7 @@ CAEWAVLoader::CAEWAVLoader() :
   m_samples           (NULL ),
   m_outputSamples     (NULL )
 {
+  m_bAudio2 = false;
 }
 
 CAEWAVLoader::~CAEWAVLoader()
@@ -284,6 +285,7 @@ bool CAEWAVLoader::Initialize(unsigned int resampleRate, CAEChannelInfo channelL
   if (m_channels != channelLayout)
   {
     CAERemap remap;
+    remap.SetAudio2(m_bAudio2);
     if (!remap.Initialize(m_channels, channelLayout, false, false, stdChLayout))
       return false;
 
