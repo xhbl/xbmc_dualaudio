@@ -164,6 +164,7 @@ CActiveAE::CActiveAE() :
   m_audioCallback = NULL;
   m_vizInitialized = false;
   m_sinkHasVolume = false;
+  m_bDumb = true;
 }
 
 CActiveAE::~CActiveAE()
@@ -1575,6 +1576,7 @@ bool CActiveAE::InitSink()
       m_sinkHasVolume = data->hasVolume;
       m_stats.SetSinkCacheTotal(data->cacheTotal);
       m_stats.SetSinkLatency(data->latency);
+	  m_bDumb = data->isNull ? true : false;
     }
     reply->Release();
   }
@@ -1643,6 +1645,7 @@ void CActiveAE::UnconfigureSink()
   m_currDevice = "";
 
   m_inMsgEvent.Reset();
+  m_bDumb = true;
 }
 
 

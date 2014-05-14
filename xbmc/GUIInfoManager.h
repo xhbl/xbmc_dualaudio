@@ -498,7 +498,7 @@ namespace INFO
 
 #define VERSION_MAJOR               13
 #define VERSION_MINOR               2
-#define VERSION_TAG                 "-DualAudio-v005"
+#define VERSION_TAG                 "-DualAudio-v006"
 
 #define LISTITEM_START              35000
 #define LISTITEM_THUMB              (LISTITEM_START)
