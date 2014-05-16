@@ -800,6 +800,8 @@ void CSettings::InitializeDefaults()
 #if !defined(TARGET_WINDOWS)
   ((CSettingString*)m_settingsManager->GetSetting("audiooutput.audiodevice"))->SetDefault(CAEFactory::GetDefaultDevice(false));
   ((CSettingString*)m_settingsManager->GetSetting("audiooutput.passthroughdevice"))->SetDefault(CAEFactory::GetDefaultDevice(true));
+  ((CSettingString*)m_settingsManager->GetSetting("audiooutput2.audiodevice"))->SetDefault(CAEFactory::GetDefaultDevice(false,true));
+  ((CSettingString*)m_settingsManager->GetSetting("audiooutput2.passthroughdevice"))->SetDefault(CAEFactory::GetDefaultDevice(true,true));
 #endif
 
   if (g_application.IsStandAlone())
@@ -959,6 +961,7 @@ void CSettings::InitializeConditions()
   m_settingsManager->AddCondition("profilehasvideoslocked", ProfileHasVideosLocked);
   m_settingsManager->AddCondition("profilelockmode", ProfileLockMode);
   m_settingsManager->AddCondition("aesettingvisible", CAEFactory::IsSettingVisible);
+  m_settingsManager->AddCondition("aesettingvisible2", CAEFactory::IsSettingVisible);
   m_settingsManager->AddCondition("codecoptionvisible", CDVDVideoCodec::IsSettingVisible);
 }
 
@@ -1045,6 +1048,24 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert("audiooutput.passthroughdevice");
   settingSet.insert("audiooutput.streamsilence");
   settingSet.insert("audiooutput.normalizelevels");
+  settingSet.insert("audiooutput2.enabled");
+  settingSet.insert("audiooutput2.config");
+  settingSet.insert("audiooutput2.samplerate");
+  settingSet.insert("audiooutput2.passthrough");
+  settingSet.insert("audiooutput2.channels");
+  settingSet.insert("audiooutput2.processquality");
+  settingSet.insert("audiooutput2.guisoundmode");
+  settingSet.insert("audiooutput2.stereoupmix");
+  settingSet.insert("audiooutput2.ac3passthrough");
+  settingSet.insert("audiooutput2.ac3transcode");
+  settingSet.insert("audiooutput2.eac3passthrough");
+  settingSet.insert("audiooutput2.dtspassthrough");
+  settingSet.insert("audiooutput2.truehdpassthrough");
+  settingSet.insert("audiooutput2.dtshdpassthrough");
+  settingSet.insert("audiooutput2.audiodevice");
+  settingSet.insert("audiooutput2.passthroughdevice");
+  settingSet.insert("audiooutput2.streamsilence");
+  settingSet.insert("audiooutput2.normalizelevels");
   settingSet.insert("lookandfeel.skin");
   settingSet.insert("lookandfeel.skinsettings");
   settingSet.insert("lookandfeel.font");
