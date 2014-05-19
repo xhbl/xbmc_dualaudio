@@ -113,6 +113,7 @@ protected:
   unsigned int       m_holdCounter;
   bool               m_limiterEnabled;
   bool               m_dontnormalize;
+  bool               m_bAudio2;
 
   struct PCMMapInfo* ResolveChannel(enum PCMChannels channel, float level, bool ifExists, std::vector<enum PCMChannels> path, struct PCMMapInfo *tablePtr);
   void               ResolveChannels(); //!< Partial BuildMap(), just enough to see which output channels are active
@@ -146,6 +147,7 @@ public:
 #endif
   float GetCurrentAttenuation() { return m_attenuationMin; }
   void               GetDownmixMatrix(float *downmix);
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
 };
 
 #endif
