@@ -619,7 +619,7 @@ void CDVDPlayerAudio::UpdatePlayerInfo()
   SInfo info;
   info.info        = s.str();
   info.pts         = m_dvdAudio.GetPlayingPts();
-  info.passthrough = m_pAudioCodec && m_pAudioCodec->NeedPassthrough();
+  info.passthrough = m_pAudioCodec && m_pAudioCodec->NeedPassthrough() && (!m_bAudio2 || (m_pAudioCodec2 && m_pAudioCodec2->NeedPassthrough()));
 
   { CSingleLock lock(m_info_section);
     m_info = info;
