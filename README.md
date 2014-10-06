@@ -1,5 +1,26 @@
 #### About
+-----
+Kodi Dual Audio provide two simultaneous audio output for built-in audio and
+video player as well as GUI sound. Two output can be configured independently
+through GUI settings.
 
+Previously the feature was developed in Dharma and Eden and distributed as
+a patch in Kodi forum. As the new Audio subsystem known as AudioEngine was
+introduced since Frodo to replace the old Audio Renderer, the old patch was
+not applicable. This project is to develop a new dual audio support for Kodi
+Frodo and future version which is adapted to the AudioEngine.
+
+For discussion and downloading, please refer to the thread:
+http://forum.kodi.tv/showthread.php?tid=192480
+
+For old dual audio patch, please refer to the thread:
+http://forum.kodi.tv/showthread.php?tid=86038
+
+Any feedback or support for this project, please send email to:
+newxhbl@hotmail.com
+
+
+-----
 Kodi is an award-winning free and open source (GPL) software media player and
 entertainment hub for digital media. Kodi is available for multiple platforms.
 Created in 2003 by a group of like minded programmers, Kodi is a non-profit
