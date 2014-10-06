@@ -34,7 +34,7 @@ using namespace ActiveAE;
 using namespace XFILE;
 
 /* typecast AE to CActiveAE */
-#define AE (*((CActiveAE*)CAEFactory::GetEngine()))
+#define AE (*((CActiveAE*)CAEFactory::GetEngine(m_bAudio2)))
 
 CActiveAESound::CActiveAESound(const std::string &filename) :
   IAESound         (filename),
@@ -81,7 +81,7 @@ uint8_t** CActiveAESound::InitSound(bool orig, SampleConfig config, int nb_sampl
     info = &m_dst_sound;
 
   delete *info;
-  *info = new CSoundPacket(config, nb_samples);
+  *info = new CSoundPacket(config, nb_samples, m_bAudio2);
 
   (*info)->nb_samples = 0;
   m_isConverted = false;

@@ -27,10 +27,11 @@
 using namespace ActiveAE;
 
 /* typecast AE to CActiveAE */
-#define AE (*((CActiveAE*)CAEFactory::GetEngine()))
+#define AE (*((CActiveAE*)CAEFactory::GetEngine(m_bAudio2)))
 
-CSoundPacket::CSoundPacket(SampleConfig conf, int samples) : config(conf)
+CSoundPacket::CSoundPacket(SampleConfig conf, int samples, bool bAudio2) : config(conf)
 {
+  m_bAudio2 = bAudio2;
   data = AE.AllocSoundSample(config, samples, bytes_per_sample, planes, linesize);
   max_nb_samples = samples;
   nb_samples = 0;
@@ -68,8 +69,10 @@ void CSampleBuffer::Return()
     pool->ReturnBuffer(this);
 }
 
-CActiveAEBufferPool::CActiveAEBufferPool(AEAudioFormat format)
+CActiveAEBufferPool::CActiveAEBufferPool(AEAudioFormat format, bool bAudio2)
 {
+  m_bAudio2 = bAudio2;
+
   m_format = format;
   if (AE_IS_RAW(m_format.m_dataFormat))
     m_format.m_dataFormat = AE_FMT_S16NE;
@@ -123,7 +126,7 @@ bool CActiveAEBufferPool::Create(unsigned int totaltime)
   {
     buffer = new CSampleBuffer();
     buffer->pool = this;
-    buffer->pkt = new CSoundPacket(config, m_format.m_frames);
+    buffer->pkt = new CSoundPacket(config, m_format.m_frames, m_bAudio2);
 
     m_allSamples.push_back(buffer);
     m_freeSamples.push_back(buffer);

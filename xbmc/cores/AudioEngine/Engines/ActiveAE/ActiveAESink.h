@@ -101,6 +101,7 @@ public:
   bool SupportsFormat(const std::string &device, AEDataFormat format, int samplerate);
   CSinkControlProtocol m_controlPort;
   CSinkDataProtocol m_dataPort;
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
 
 protected:
   void Process();
@@ -144,6 +145,7 @@ protected:
   CEngineStats *m_stats;
   float m_volume;
   int m_sinkLatency;
+  bool m_bAudio2;
 };
 
 }
