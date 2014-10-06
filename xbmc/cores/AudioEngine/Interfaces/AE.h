@@ -71,7 +71,7 @@ class IAE
 protected:
   friend class CAEFactory;
 
-  IAE() {}
+  IAE() { m_bAudio2 = false; m_bDisabled = false; }
   virtual ~IAE() {}
 
   /**
@@ -142,6 +142,7 @@ public:
    * @return The current mute state
    */
   virtual bool IsMuted() = 0;
+  virtual bool IsDumb() = 0;
 
   /**
    * Sets the sound mode
@@ -199,6 +200,7 @@ public:
    * @return the default audio device
    */
   virtual std::string GetDefaultDevice(bool passthrough) { return "default"; }
+  virtual std::string GetCreateDevice() { return ""; }
 
   /**
    * Returns true if the AudioEngine supports AE_FMT_RAW streams for use with formats such as IEC61937
@@ -251,5 +253,14 @@ public:
    * Instruct AE to re-initialize, e.g. after ELD change event
    */
   virtual void DeviceChange() {return; }
+
+protected:
+  bool m_bAudio2;
+  bool m_bDisabled;
+
+public:
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
+  void SetDisabled(bool bDisabled){ m_bDisabled = bDisabled; }
+  bool IsDisabled(){ return m_bDisabled; }
 };
 
