@@ -228,6 +228,7 @@ public:
 
   virtual void EnumerateOutputDevices(AEDeviceList &devices, bool passthrough);
   virtual std::string GetDefaultDevice(bool passthrough);
+  virtual std::string GetCreateDevice() {return m_currDevice;}
   virtual bool SupportsRaw(AEDataFormat format, int samplerate);
   virtual bool SupportsSilenceTimeout();
   virtual bool HasStereoAudioChannelCount();
@@ -271,6 +272,11 @@ protected:
   void Start();
   void Dispose();
   void LoadSettings();
+  void LoadSettings2();
+  void CheckDevice1(bool bPreInitSink);
+  void CheckDevice2(bool bPreInitSink);
+  void OnSettingsChange2(const std::string& setting);
+  bool IsSettingVisible2(const std::string &settingId);
   bool NeedReconfigureBuffers();
   bool NeedReconfigureSink();
   void ApplySettingsToFormat(AEAudioFormat &format, AudioSettings &settings, int *mode = NULL);
@@ -360,5 +366,9 @@ protected:
   // polled via the interface
   float m_aeVolume;
   bool m_aeMuted;
+  std::string m_device_sv;
+  std::string m_passthoughdevice_sv;
+  static bool m_bFirstSinkOK;
+  static CCriticalSection m_sinkLock;
 };
 };

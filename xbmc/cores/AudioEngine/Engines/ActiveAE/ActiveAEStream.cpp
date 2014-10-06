@@ -32,7 +32,7 @@
 using namespace ActiveAE;
 
 /* typecast AE to CActiveAE */
-#define AE (*((CActiveAE*)CAEFactory::GetEngine()))
+#define AE (*((CActiveAE*)CAEFactory::GetEngine(m_bAudio2)))
 
 
 CActiveAEStream::CActiveAEStream(AEAudioFormat *format)
@@ -164,7 +164,7 @@ void CActiveAEStream::InitRemapper()
                      false);
 
     // extra sound packet, we can't resample to the same buffer
-    m_remapBuffer = new CSoundPacket(m_inputBuffers->m_allSamples[0]->pkt->config, m_inputBuffers->m_allSamples[0]->pkt->max_nb_samples);
+    m_remapBuffer = new CSoundPacket(m_inputBuffers->m_allSamples[0]->pkt->config, m_inputBuffers->m_allSamples[0]->pkt->max_nb_samples, m_bAudio2);
   }
 }
 

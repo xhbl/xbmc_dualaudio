@@ -47,7 +47,7 @@ struct SampleConfig
 class CSoundPacket
 {
 public:
-  CSoundPacket(SampleConfig conf, int samples);
+  CSoundPacket(SampleConfig conf, int samples, bool bAudio2 = false);
   ~CSoundPacket();
   uint8_t **data;                        // array with pointers to planes of data
   SampleConfig config;
@@ -56,6 +56,8 @@ public:
   int planes;                            // 1 for non planar formats, #channels for planar
   int nb_samples;                        // number of frames used
   int max_nb_samples;                    // max number of frames this packet can hold
+protected:
+  bool m_bAudio2;
 };
 
 class CActiveAEBufferPool;
@@ -78,7 +80,7 @@ public:
 class CActiveAEBufferPool
 {
 public:
-  CActiveAEBufferPool(AEAudioFormat format);
+  CActiveAEBufferPool(AEAudioFormat format, bool bAudio2 = false);
   virtual ~CActiveAEBufferPool();
   virtual bool Create(unsigned int totaltime);
   CSampleBuffer *GetFreeBuffer();
@@ -86,6 +88,8 @@ public:
   AEAudioFormat m_format;
   std::deque<CSampleBuffer*> m_allSamples;
   std::deque<CSampleBuffer*> m_freeSamples;
+protected:
+  bool m_bAudio2;
 };
 
 class IAEResample;
