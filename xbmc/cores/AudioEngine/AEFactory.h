@@ -65,6 +65,7 @@ public:
   static bool SupportsQualitySetting(bool bAudio2 = false);
   static void SetMute(const bool enabled);
   static bool IsMuted();
+  static bool IsDumb(bool bAudio2 = false);
   static float GetVolume();
   static void SetVolume(const float volume);
   static void Shutdown();

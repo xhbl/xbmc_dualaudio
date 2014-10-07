@@ -195,6 +195,7 @@ void CActiveAESink::StateMachine(int signal, Protocol *port, Message *msg)
             reply.cacheTotal = m_sink->GetCacheTotal();
             reply.latency = m_sink->GetLatency();
             reply.hasVolume = m_sink->HasVolume();
+            reply.isNull = (std::string(m_sink->GetName()) == "NULL");
             m_state = S_TOP_CONFIGURED_IDLE;
             m_extTimeout = 10000;
             m_sinkLatency = (int64_t)(reply.latency * 1000);

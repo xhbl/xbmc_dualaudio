@@ -47,6 +47,7 @@ struct SinkReply
   float cacheTotal;
   float latency;
   bool hasVolume;
+  bool isNull;
 };
 
 class CSinkControlProtocol : public Protocol

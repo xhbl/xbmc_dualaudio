@@ -346,6 +346,16 @@ bool CAEFactory::IsMuted()
   return g_bMute || (g_fVolume == 0.0f);
 }
 
+bool CAEFactory::IsDumb(bool bAudio2)
+{
+  if(!bAudio2 && AE)
+    return AE->IsDumb();
+  if(bAudio2 && AE2)
+    return AE2->IsDumb();
+
+  return true;
+}
+
 float CAEFactory::GetVolume()
 {
   if(AE)

@@ -215,6 +215,7 @@ public:
   virtual void  SetVolume(const float volume);
   virtual void  SetMute(const bool enabled);
   virtual bool  IsMuted();
+  virtual bool  IsDumb() { return m_bDumb; }
   virtual void  SetSoundMode(const int mode);
 
   /* returns a new stream for data in the specified format */
@@ -367,6 +368,8 @@ protected:
   // polled via the interface
   float m_aeVolume;
   bool m_aeMuted;
+
+  bool m_bDumb;
   std::string m_device_sv;
   std::string m_passthoughdevice_sv;
   static bool m_bFirstSinkOK;
