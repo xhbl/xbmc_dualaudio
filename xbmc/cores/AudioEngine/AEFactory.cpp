@@ -30,12 +30,16 @@
 #include "utils/StringUtils.h"
 
 IAE* CAEFactory::AE = NULL;
+IAE* CAEFactory::AE2 = NULL;
 static float  g_fVolume = 1.0f;
 static bool   g_bMute = false;
 
-IAE *CAEFactory::GetEngine()
+IAE *CAEFactory::GetEngine(bool bAudio2)
 {
-  return AE;
+  if(!bAudio2)
+    return AE;
+  else
+    return AE2;
 }
 
 bool CAEFactory::LoadEngine()
@@ -63,6 +67,24 @@ bool CAEFactory::LoadEngine(enum AEEngine engine)
     AE = NULL;
   }
 
+  if (!AE2)
+  {
+    switch(engine)
+    {
+      case AE_ENGINE_NULL	  :
+      case AE_ENGINE_ACTIVE   : AE2 = new ActiveAE::CActiveAE(); break;
+      default: break;
+    }
+  
+    if (AE2)
+        AE2->SetAudio2(true);
+    if (AE2 && !AE2->CanInit())
+    {
+      delete AE2;
+      AE2 = NULL;
+    }
+  }
+
   return AE != NULL;
 }
 
@@ -74,6 +96,12 @@ void CAEFactory::UnLoadEngine()
     delete AE;
     AE = NULL;
   }
+  if(AE2)
+  {
+    AE2->Shutdown();
+    delete AE2;
+    AE2 = NULL;
+  }
 }
 
 bool CAEFactory::StartEngine()
@@ -82,7 +110,17 @@ bool CAEFactory::StartEngine()
     return false;
 
   if (AE->Initialize())
+  {
+    if (AE2)
+    {
+      if(!AE2->Initialize())
+      {
+        delete AE2;
+        AE2 = NULL;
+      }
+    }
     return true;
+  }
 
   delete AE;
   AE = NULL;
@@ -91,18 +129,24 @@ bool CAEFactory::StartEngine()
 
 bool CAEFactory::Suspend()
 {
+  bool bRet = false;
   if(AE)
-    return AE->Suspend();
+    bRet = AE->Suspend();
+  if (AE2)
+    AE2->Suspend();
 
-  return false;
+  return bRet;
 }
 
 bool CAEFactory::Resume()
 {
+  bool bRet = false;
   if(AE)
-    return AE->Resume();
+    bRet = AE->Resume();
+  if (AE2)
+    AE2->Resume();
 
-  return false;
+  return bRet;
 }
 
 bool CAEFactory::IsSuspended()
@@ -115,36 +159,50 @@ bool CAEFactory::IsSuspended()
 }
 
 /* engine wrapping */
-IAESound *CAEFactory::MakeSound(const std::string &file)
+IAESound *CAEFactory::MakeSound(const std::string &file, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->MakeSound(file);
+  if(bAudio2 && AE2)
+    return AE2->MakeSound(file);
   
   return NULL;
 }
 
 void CAEFactory::FreeSound(IAESound *sound)
 {
-  if(AE)
+  if(!sound)
+    return;
+  bool bAudio2 = sound->IsAudio2();
+
+  if(!bAudio2 && AE)
     AE->FreeSound(sound);
+  if(bAudio2 && AE2)
+    AE2->FreeSound(sound);
 }
 
-void CAEFactory::SetSoundMode(const int mode)
+void CAEFactory::SetSoundMode(const int mode, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     AE->SetSoundMode(mode);
+  if(bAudio2 && AE2)
+    AE2->SetSoundMode(mode);
 }
 
-void CAEFactory::OnSettingsChange(std::string setting)
+void CAEFactory::OnSettingsChange(std::string setting, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     AE->OnSettingsChange(setting);
+  if(bAudio2 && AE2)
+    AE2->OnSettingsChange(setting);
 }
 
-void CAEFactory::EnumerateOutputDevices(AEDeviceList &devices, bool passthrough)
+void CAEFactory::EnumerateOutputDevices(AEDeviceList &devices, bool passthrough, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     AE->EnumerateOutputDevices(devices, passthrough);
+  if(bAudio2 && AE2)
+    AE2->EnumerateOutputDevices(devices, passthrough);
 }
 
 void CAEFactory::VerifyOutputDevice(std::string &device, bool passthrough)
@@ -172,61 +230,83 @@ void CAEFactory::VerifyOutputDevice(std::string &device, bool passthrough)
   device = firstDevice;
 }
 
-std::string CAEFactory::GetDefaultDevice(bool passthrough)
+std::string CAEFactory::GetDefaultDevice(bool passthrough, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->GetDefaultDevice(passthrough);
+  if(bAudio2 && AE2)
+    return AE2->GetDefaultDevice(passthrough);
 
   return "default";
 }
 
-bool CAEFactory::SupportsRaw(AEDataFormat format, int samplerate)
+std::string CAEFactory::GetCreateDevice(bool bAudio2)
+{
+  if(!bAudio2 && AE)
+    return AE->GetCreateDevice();
+  if(bAudio2 && AE2)
+    return AE2->GetCreateDevice();
+
+  return "";
+}
+
+bool CAEFactory::SupportsRaw(AEDataFormat format, int samplerate, bool bAudio2)
 {
   // check if passthrough is enabled
-  if (!CSettings::Get().GetBool("audiooutput.passthrough"))
+  if (!CSettings::Get().GetBool(!bAudio2 ? "audiooutput.passthrough" : "audiooutput2.passthrough"))
     return false;
 
   // fixed config disabled passthrough
-  if (CSettings::Get().GetInt("audiooutput.config") == AE_CONFIG_FIXED)
+  if (CSettings::Get().GetInt(!bAudio2 ? "audiooutput.config" : "audiooutput2.config") == AE_CONFIG_FIXED)
     return false;
 
   // check if the format is enabled in settings
-  if (format == AE_FMT_AC3 && !CSettings::Get().GetBool("audiooutput.ac3passthrough"))
+  if (format == AE_FMT_AC3 && !CSettings::Get().GetBool(!bAudio2 ? "audiooutput.ac3passthrough" : "audiooutput2.ac3passthrough"))
     return false;
-  if (format == AE_FMT_DTS && !CSettings::Get().GetBool("audiooutput.dtspassthrough"))
+  if (format == AE_FMT_DTS && !CSettings::Get().GetBool(!bAudio2 ? "audiooutput.dtspassthrough" : "audiooutput2.dtspassthrough"))
     return false;
-  if (format == AE_FMT_EAC3 && !CSettings::Get().GetBool("audiooutput.eac3passthrough"))
+  if (format == AE_FMT_EAC3 && !CSettings::Get().GetBool(!bAudio2 ? "audiooutput.eac3passthrough" : "audiooutput2.eac3passthrough"))
     return false;
-  if (format == AE_FMT_TRUEHD && !CSettings::Get().GetBool("audiooutput.truehdpassthrough"))
+  if (format == AE_FMT_TRUEHD && !CSettings::Get().GetBool(!bAudio2 ? "audiooutput.truehdpassthrough" : "audiooutput2.truehdpassthrough"))
     return false;
-  if (format == AE_FMT_DTSHD && !CSettings::Get().GetBool("audiooutput.dtshdpassthrough"))
+  if (format == AE_FMT_DTSHD && !CSettings::Get().GetBool(!bAudio2 ? "audiooutput.dtshdpassthrough" : "audiooutput2.dtshdpassthrough"))
     return false;
 
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->SupportsRaw(format, samplerate);
+  if(bAudio2 && AE2)
+    return AE2->SupportsRaw(format, samplerate);
 
   return false;
 }
 
-bool CAEFactory::SupportsSilenceTimeout()
+bool CAEFactory::SupportsSilenceTimeout(bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->SupportsSilenceTimeout();
+  if(bAudio2 && AE2)
+    return AE2->SupportsSilenceTimeout();
 
   return false;
 }
 
-bool CAEFactory::HasStereoAudioChannelCount()
+bool CAEFactory::HasStereoAudioChannelCount(bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->HasStereoAudioChannelCount();
+  if(bAudio2 && AE2)
+    return AE2->HasStereoAudioChannelCount();
+
   return false;
 }
 
-bool CAEFactory::HasHDAudioChannelCount()
+bool CAEFactory::HasHDAudioChannelCount(bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->HasHDAudioChannelCount();
+  if(bAudio2 && AE2)
+    return AE2->HasHDAudioChannelCount();
+
   return false;
 }
 
@@ -234,20 +314,26 @@ bool CAEFactory::HasHDAudioChannelCount()
   * Returns true if current AudioEngine supports at lest two basic quality levels
   * @return true if quality setting is supported, otherwise false
   */
-bool CAEFactory::SupportsQualitySetting(void) 
+bool CAEFactory::SupportsQualitySetting(bool bAudio2) 
 {
-  if (!AE)
-    return false;
+  if (!bAudio2 && AE)
+    return ((AE->SupportsQualityLevel(AE_QUALITY_LOW)? 1 : 0) + 
+            (AE->SupportsQualityLevel(AE_QUALITY_MID)? 1 : 0) +
+            (AE->SupportsQualityLevel(AE_QUALITY_HIGH)? 1 : 0)) >= 2; 
+  if (bAudio2 && AE2)
+    return ((AE2->SupportsQualityLevel(AE_QUALITY_LOW)? 1 : 0) + 
+            (AE2->SupportsQualityLevel(AE_QUALITY_MID)? 1 : 0) +
+            (AE2->SupportsQualityLevel(AE_QUALITY_HIGH)? 1 : 0)) >= 2; 
 
-  return ((AE->SupportsQualityLevel(AE_QUALITY_LOW)? 1 : 0) + 
-          (AE->SupportsQualityLevel(AE_QUALITY_MID)? 1 : 0) +
-          (AE->SupportsQualityLevel(AE_QUALITY_HIGH)? 1 : 0)) >= 2; 
+  return false;
 }
   
 void CAEFactory::SetMute(const bool enabled)
 {
   if(AE)
     AE->SetMute(enabled);
+  if(AE2)
+    AE2->SetMute(enabled);
 
   g_bMute = enabled;
 }
@@ -271,7 +357,10 @@ float CAEFactory::GetVolume()
 void CAEFactory::SetVolume(const float volume)
 {
   if(AE)
+  {
     AE->SetVolume(volume);
+    AE2->SetVolume(volume);
+  }
   else
     g_fVolume = volume;
 }
@@ -280,21 +369,31 @@ void CAEFactory::Shutdown()
 {
   if(AE)
     AE->Shutdown();
+  if(AE2)
+    AE2->Shutdown();
 }
 
 IAEStream *CAEFactory::MakeStream(enum AEDataFormat dataFormat, unsigned int sampleRate, 
-  unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options)
+  unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options, bool bAudio2)
 {
-  if(AE)
+  if(!bAudio2 && AE)
     return AE->MakeStream(dataFormat, sampleRate, encodedSampleRate, channelLayout, options);
+  if(bAudio2 && AE2)
+    return AE2->MakeStream(dataFormat, sampleRate, encodedSampleRate, channelLayout, options);
 
   return NULL;
 }
 
 IAEStream *CAEFactory::FreeStream(IAEStream *stream)
 {
-  if(AE)
+  if(!stream)
+    return NULL;
+  bool bAudio2 = stream->IsAudio2();
+
+  if(!bAudio2 && AE)
     return AE->FreeStream(stream);
+  if(bAudio2 && AE2)
+    return AE2->FreeStream(stream);
 
   return NULL;
 }
@@ -303,6 +402,8 @@ void CAEFactory::GarbageCollect()
 {
   if(AE)
     AE->GarbageCollect();
+  if(AE2)
+    AE2->GarbageCollect();
 }
 
 void CAEFactory::SettingOptionsAudioDevicesFiller(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, void *data)
@@ -392,20 +493,29 @@ void CAEFactory::UnregisterAudioCallback()
 
 bool CAEFactory::IsSettingVisible(const std::string &condition, const std::string &value, const CSetting *setting)
 {
-  if (setting == NULL || value.empty() || !AE)
+  if (setting == NULL || value.empty())
     return false;
 
-  return AE->IsSettingVisible(value);
+  if(condition == "aesettingvisible" && AE)
+    return AE->IsSettingVisible(value);
+  else if(condition == "aesettingvisible2" && AE2)
+    return AE2->IsSettingVisible(value);
+
+  return false;
 }
 
 void CAEFactory::KeepConfiguration(unsigned int millis)
 {
   if (AE)
     AE->KeepConfiguration(millis);
+  if (AE2)
+    AE2->KeepConfiguration(millis);
 }
 
 void CAEFactory::DeviceChange()
 {
   if (AE)
     AE->DeviceChange();
+  if (AE2)
+    AE2->DeviceChange();
 }

@@ -37,7 +37,7 @@ enum AEEngine
 class CAEFactory
 {
 public:
-  static IAE *GetEngine();
+  static IAE *GetEngine(bool bAudio2 = false);
   static bool LoadEngine();
   static void UnLoadEngine();
   static bool StartEngine();
@@ -45,30 +45,31 @@ public:
   static bool Resume(); /** Resumes output after Suspend - re-initializes sink */
   static bool IsSuspended(); /** Returns true if output has been suspended */
   /* wrap engine interface */
-  static IAESound *MakeSound(const std::string &file);
+  static IAESound *MakeSound(const std::string &file, bool bAudio2 = false);
   static void FreeSound(IAESound *sound);
-  static void SetSoundMode(const int mode);
-  static void OnSettingsChange(std::string setting);
-  static void EnumerateOutputDevices(AEDeviceList &devices, bool passthrough);
+  static void SetSoundMode(const int mode, bool bAudio2 = false);
+  static void OnSettingsChange(std::string setting, bool bAudio2 = false);
+  static void EnumerateOutputDevices(AEDeviceList &devices, bool passthrough, bool bAudio2 = false);
   static void VerifyOutputDevice(std::string &device, bool passthrough);
-  static std::string GetDefaultDevice(bool passthrough);
-  static bool SupportsRaw(AEDataFormat format, int samplerate);
-  static bool SupportsSilenceTimeout();
-  static bool HasStereoAudioChannelCount();
-  static bool HasHDAudioChannelCount();
+  static std::string GetDefaultDevice(bool passthrough, bool bAudio2 = false);
+  static std::string GetCreateDevice(bool bAudio2 = false);
+  static bool SupportsRaw(AEDataFormat format, int samplerate, bool bAudio2 = false);
+  static bool SupportsSilenceTimeout(bool bAudio2 = false);
+  static bool HasStereoAudioChannelCount(bool bAudio2 = false);
+  static bool HasHDAudioChannelCount(bool bAudio2 = false);
 
   /**
    * Returns true if current AudioEngine supports at lest two basic quality levels
    * @return true if quality setting is supported, otherwise false
    */
-  static bool SupportsQualitySetting(void);
+  static bool SupportsQualitySetting(bool bAudio2 = false);
   static void SetMute(const bool enabled);
   static bool IsMuted();
   static float GetVolume();
   static void SetVolume(const float volume);
   static void Shutdown();
   static IAEStream *MakeStream(enum AEDataFormat dataFormat, unsigned int sampleRate, 
-    unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options = 0);
+    unsigned int encodedSampleRate, CAEChannelInfo channelLayout, unsigned int options = 0, bool bAudio2 = false);
   static IAEStream *FreeStream(IAEStream *stream);
   static void GarbageCollect();
 
@@ -86,7 +87,7 @@ public:
 private:
   static bool LoadEngine(enum AEEngine engine);
   static IAE *AE;
-
+  static IAE *AE2;
   static void SettingOptionsAudioDevicesFillerGeneral(const CSetting *setting, std::vector< std::pair<std::string, std::string> > &list, std::string &current, bool passthrough);
 };
 
