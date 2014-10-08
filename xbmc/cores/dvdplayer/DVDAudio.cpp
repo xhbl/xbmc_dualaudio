@@ -100,6 +100,7 @@ CDVDAudio::CDVDAudio(volatile bool &bStop)
   m_iBitrate = 0;
   m_SecondsPerByte = 0.0;
   m_bPaused = true;
+  m_bAudio2 = false;
 }
 
 CDVDAudio::~CDVDAudio()
@@ -109,7 +110,7 @@ CDVDAudio::~CDVDAudio()
     CAEFactory::FreeStream(m_pAudioStream);
 }
 
-bool CDVDAudio::Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool needresampler)
+bool CDVDAudio::Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool needresampler, bool bAudio2/* = false*/)
 {
   CLog::Log(LOGNOTICE,
     "Creating audio stream (codec id: %i, channels: %i, sample rate: %i, %s)",
@@ -129,7 +130,7 @@ bool CDVDAudio::Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool ne
     audioframe.sample_rate,
     audioframe.encoded_sample_rate,
     audioframe.channel_layout,
-    options
+    options, bAudio2
   );
   if (!m_pAudioStream) return false;
 
@@ -145,6 +146,7 @@ bool CDVDAudio::Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool ne
 
   SetDynamicRangeCompression((long)(CMediaSettings::Get().GetCurrentVideoSettings().m_VolumeAmplification * 100));
 
+  m_bAudio2 = bAudio2;
   return true;
 }
 
