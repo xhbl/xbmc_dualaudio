@@ -1705,6 +1705,7 @@ void CApplication::OnSettingChanged(const CSetting *setting)
   {
     // AE is master of audio settings and needs to be informed first
     CAEFactory::OnSettingsChange(settingId,true);
+	g_audioManager.CheckAudio2();
 
     if (settingId == "audiooutput2.guisoundmode")
     {
