@@ -225,9 +225,11 @@ void CSettings::Uninitialize()
   m_settingsManager->UnregisterSettingOptionsFiller("audiocdactions");
   m_settingsManager->UnregisterSettingOptionsFiller("audiocdencoders");
   m_settingsManager->UnregisterSettingOptionsFiller("aequalitylevels");
+  m_settingsManager->UnregisterSettingOptionsFiller("aequalitylevels2");
   m_settingsManager->UnregisterSettingOptionsFiller("audiodevices");
   m_settingsManager->UnregisterSettingOptionsFiller("audiodevicespassthrough");
   m_settingsManager->UnregisterSettingOptionsFiller("audiostreamsilence");
+  m_settingsManager->UnregisterSettingOptionsFiller("audiostreamsilence2");
   m_settingsManager->UnregisterSettingOptionsFiller("charsets");
   m_settingsManager->UnregisterSettingOptionsFiller("epgguideviews");
   m_settingsManager->UnregisterSettingOptionsFiller("fontheights");
@@ -574,6 +576,8 @@ void CSettings::InitializeDefaults()
 #if !defined(TARGET_WINDOWS)
   ((CSettingString*)m_settingsManager->GetSetting("audiooutput.audiodevice"))->SetDefault(CAEFactory::GetDefaultDevice(false));
   ((CSettingString*)m_settingsManager->GetSetting("audiooutput.passthroughdevice"))->SetDefault(CAEFactory::GetDefaultDevice(true));
+  ((CSettingString*)m_settingsManager->GetSetting("audiooutput2.audiodevice"))->SetDefault(CAEFactory::GetDefaultDevice(false,true));
+  ((CSettingString*)m_settingsManager->GetSetting("audiooutput2.passthroughdevice"))->SetDefault(CAEFactory::GetDefaultDevice(true,true));
 #endif
 
   if (g_application.IsStandAlone())
@@ -592,9 +596,11 @@ void CSettings::InitializeOptionFillers()
   m_settingsManager->RegisterSettingOptionsFiller("audiocdactions", MEDIA_DETECT::CAutorun::SettingOptionAudioCdActionsFiller);
 #endif
   m_settingsManager->RegisterSettingOptionsFiller("aequalitylevels", CAEFactory::SettingOptionsAudioQualityLevelsFiller);
+  m_settingsManager->RegisterSettingOptionsFiller("aequalitylevels2", CAEFactory::SettingOptionsAudioQualityLevelsFiller);
   m_settingsManager->RegisterSettingOptionsFiller("audiodevices", CAEFactory::SettingOptionsAudioDevicesFiller);
   m_settingsManager->RegisterSettingOptionsFiller("audiodevicespassthrough", CAEFactory::SettingOptionsAudioDevicesPassthroughFiller);
   m_settingsManager->RegisterSettingOptionsFiller("audiostreamsilence", CAEFactory::SettingOptionsAudioStreamsilenceFiller);
+  m_settingsManager->RegisterSettingOptionsFiller("audiostreamsilence2", CAEFactory::SettingOptionsAudioStreamsilenceFiller);
   m_settingsManager->RegisterSettingOptionsFiller("charsets", CCharsetConverter::SettingOptionsCharsetsFiller);
   m_settingsManager->RegisterSettingOptionsFiller("fonts", GUIFontManager::SettingOptionsFontsFiller);
   m_settingsManager->RegisterSettingOptionsFiller("languagenames", CLangInfo::SettingOptionsLanguageNamesFiller);
@@ -741,6 +747,24 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert("audiooutput.passthroughdevice");
   settingSet.insert("audiooutput.streamsilence");
   settingSet.insert("audiooutput.maintainoriginalvolume");
+  settingSet.insert("audiooutput2.enabled");
+  settingSet.insert("audiooutput2.config");
+  settingSet.insert("audiooutput2.samplerate");
+  settingSet.insert("audiooutput2.passthrough");
+  settingSet.insert("audiooutput2.channels");
+  settingSet.insert("audiooutput2.processquality");
+  settingSet.insert("audiooutput2.guisoundmode");
+  settingSet.insert("audiooutput2.stereoupmix");
+  settingSet.insert("audiooutput2.ac3passthrough");
+  settingSet.insert("audiooutput2.ac3transcode");
+  settingSet.insert("audiooutput2.eac3passthrough");
+  settingSet.insert("audiooutput2.dtspassthrough");
+  settingSet.insert("audiooutput2.truehdpassthrough");
+  settingSet.insert("audiooutput2.dtshdpassthrough");
+  settingSet.insert("audiooutput2.audiodevice");
+  settingSet.insert("audiooutput2.passthroughdevice");
+  settingSet.insert("audiooutput2.streamsilence");
+  settingSet.insert("audiooutput2.maintainoriginalvolume");
   settingSet.insert("lookandfeel.skin");
   settingSet.insert("lookandfeel.skinsettings");
   settingSet.insert("lookandfeel.font");

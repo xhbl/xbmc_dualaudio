@@ -416,16 +416,18 @@ void CAEFactory::SettingOptionsAudioDevicesPassthroughFiller(const CSetting *set
 
 void CAEFactory::SettingOptionsAudioQualityLevelsFiller(const CSetting *setting, std::vector< std::pair<std::string, int> > &list, int &current, void *data)
 {
-  if (!AE)
+  IAE* _AE = StringUtils::StartsWithNoCase(setting->GetId(), "audiooutput2.") ? AE2 : AE;
+	
+  if (!_AE)
     return;
 
-  if(AE->SupportsQualityLevel(AE_QUALITY_LOW))
+  if(_AE->SupportsQualityLevel(AE_QUALITY_LOW))
     list.push_back(std::make_pair(g_localizeStrings.Get(13506), AE_QUALITY_LOW));
-  if(AE->SupportsQualityLevel(AE_QUALITY_MID))
+  if(_AE->SupportsQualityLevel(AE_QUALITY_MID))
     list.push_back(std::make_pair(g_localizeStrings.Get(13507), AE_QUALITY_MID));
-  if(AE->SupportsQualityLevel(AE_QUALITY_HIGH))
+  if(_AE->SupportsQualityLevel(AE_QUALITY_HIGH))
     list.push_back(std::make_pair(g_localizeStrings.Get(13508), AE_QUALITY_HIGH));
-  if(AE->SupportsQualityLevel(AE_QUALITY_REALLYHIGH))
+  if(_AE->SupportsQualityLevel(AE_QUALITY_REALLYHIGH))
     list.push_back(std::make_pair(g_localizeStrings.Get(13509), AE_QUALITY_REALLYHIGH));
   if(AE->SupportsQualityLevel(AE_QUALITY_GPU))
     list.push_back(std::make_pair(g_localizeStrings.Get(38010), AE_QUALITY_GPU));
@@ -433,13 +435,15 @@ void CAEFactory::SettingOptionsAudioQualityLevelsFiller(const CSetting *setting,
 
 void CAEFactory::SettingOptionsAudioStreamsilenceFiller(const CSetting *setting, std::vector< std::pair<std::string, int> > &list, int &current, void *data)
 {
-  if (!AE)
+  IAE* _AE = StringUtils::StartsWithNoCase(setting->GetId(), "audiooutput2.") ? AE2 : AE;
+
+  if (!_AE)
     return;
 
   list.push_back(std::make_pair(g_localizeStrings.Get(20422), XbmcThreads::EndTime::InfiniteValue));
   list.push_back(std::make_pair(g_localizeStrings.Get(13551), 0));
 
-  if (AE->SupportsSilenceTimeout())
+  if (_AE->SupportsSilenceTimeout())
   {
     list.push_back(std::make_pair(StringUtils::Format(g_localizeStrings.Get(13554).c_str(), 1), 1));
     for (int i = 2; i <= 10; i++)
