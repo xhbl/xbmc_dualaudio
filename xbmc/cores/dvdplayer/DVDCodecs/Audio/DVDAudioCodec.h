@@ -64,7 +64,7 @@ class CDVDAudioCodec
 {
 public:
 
-  CDVDAudioCodec() {}
+  CDVDAudioCodec() { m_bAudio2 = false; }
   virtual ~CDVDAudioCodec() {}
 
   /*
@@ -171,4 +171,9 @@ public:
    * should return amount of data decoded has buffered in preparation for next audio frame
    */
   virtual int GetBufferSize() { return 0; }
+  
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; };
+  
+  protected:
+	bool m_bAudio2;
 };
