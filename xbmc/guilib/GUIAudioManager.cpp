@@ -39,6 +39,7 @@ CGUIAudioManager g_audioManager;
 CGUIAudioManager::CGUIAudioManager()
 {
   m_bEnabled = false;
+  m_bAudio2 = false;
 }
 
 CGUIAudioManager::~CGUIAudioManager()
@@ -91,12 +92,16 @@ void CGUIAudioManager::Stop()
   {
     if (it->second.initSound  ) it->second.initSound  ->Stop();
     if (it->second.deInitSound) it->second.deInitSound->Stop();
+    if (it->second.initSound2  ) it->second.initSound2  ->Stop();
+    if (it->second.deInitSound2) it->second.deInitSound2->Stop();
   }
 
   for (pythonSoundsMap::iterator it = m_pythonSounds.begin(); it != m_pythonSounds.end(); ++it)
   {
-    IAESound* sound = it->second;
+    IAESound* sound = it->second.sound;
     sound->Stop();
+    sound = it->second.sound2;
+    if (sound) sound->Stop();
   }
 }
 
@@ -113,8 +118,10 @@ void CGUIAudioManager::PlayActionSound(const CAction& action)
   if (it == m_actionSoundMap.end())
     return;
 
-  if (it->second)
-    it->second->Play();
+  if (it->second.sound)
+    it->second.sound->Play();
+  if (m_bAudio2 && it->second.sound2)
+    it->second.sound2->Play();
 }
 
 // \brief Play a sound associated with a window and its event
@@ -133,13 +140,16 @@ void CGUIAudioManager::PlayWindowSound(int id, WINDOW_SOUND event)
 
   CWindowSounds sounds=it->second;
   IAESound *sound = NULL;
+  IAESound *sound2 = NULL;
   switch (event)
   {
   case SOUND_INIT:
     sound = sounds.initSound;
+    sound2 = sounds.initSound2;
     break;
   case SOUND_DEINIT:
     sound = sounds.deInitSound;
+    sound2 = sounds.deInitSound2;
     break;
   }
 
@@ -147,6 +157,9 @@ void CGUIAudioManager::PlayWindowSound(int id, WINDOW_SOUND event)
     return;
 
   sound->Play();
+
+  if (m_bAudio2 && sound2)
+    sound2->Play();
 }
 
 // \brief Play a sound given by filename
@@ -162,25 +175,31 @@ void CGUIAudioManager::PlayPythonSound(const std::string& strFileName, bool useC
   pythonSoundsMap::iterator itsb=m_pythonSounds.find(strFileName);
   if (itsb != m_pythonSounds.end())
   {
-    IAESound* sound = itsb->second;
+    IAESound* sound = itsb->second.sound;
     if (useCached)
     {
       sound->Play();
+      sound = itsb->second.sound2;
+      if (m_bAudio2 && sound) sound->Play();
       return;
     }
     else
     {
       FreeSoundAllUsage(sound);
+      sound = itsb->second.sound2;
+      if (m_bAudio2 && sound) FreeSoundAllUsage(sound);
       m_pythonSounds.erase(itsb);
     }
   }
 
-  IAESound *sound = LoadSound(strFileName);
-  if (!sound)
+  CAPSounds aps = LoadSound(strFileName);
+  if (!aps.sound)
     return;
 
-  m_pythonSounds.insert(pair<const std::string, IAESound*>(strFileName, sound));
-  sound->Play();
+  m_pythonSounds.insert(pair<const std::string, CAPSounds>(strFileName, aps));
+  aps.sound->Play();
+  if (m_bAudio2 && aps.sound2)
+    aps.sound2->Play();
 }
 
 void CGUIAudioManager::UnLoad()
@@ -201,7 +220,7 @@ void CGUIAudioManager::UnLoad()
     pythonSoundsMap::iterator it = m_pythonSounds.begin();
     while (it != m_pythonSounds.end())
     {
-      IAESound* sound = it->second;
+      IAESound* sound = it->second.sound;
       FreeSound(sound);
       m_pythonSounds.erase(it++);
     }
@@ -212,7 +231,7 @@ void CGUIAudioManager::UnLoad()
     actionSoundMap::iterator it = m_actionSoundMap.begin();
     while (it != m_actionSoundMap.end())
     {
-      IAESound* sound = it->second;
+      IAESound* sound = it->second.sound;
       FreeSound(sound);
       m_actionSoundMap.erase(it++);
     }
@@ -250,6 +269,7 @@ bool CGUIAudioManager::Load()
 {
   CSingleLock lock(m_cs);
   UnLoad();
+  CheckAudio2();
 
   m_strMediaDir = GetSoundSkinPath();
   if (m_strMediaDir.empty())
@@ -301,9 +321,9 @@ bool CGUIAudioManager::Load()
       if (id > 0 && !strFile.empty())
       {
         std::string filename = URIUtils::AddFileToFolder(m_strMediaDir, strFile);
-        IAESound *sound = LoadSound(filename);
-        if (sound)
-          m_actionSoundMap.insert(pair<int, IAESound *>(id, sound));
+        CAPSounds aps = LoadSound(filename);
+        if (aps.sound)
+          m_actionSoundMap.insert(pair<int, CAPSounds>(id, aps));
       }
 
       pAction = pAction->NextSibling();
@@ -328,8 +348,13 @@ bool CGUIAudioManager::Load()
       }
 
       CWindowSounds sounds;
-      sounds.initSound   = LoadWindowSound(pWindow, "activate"  );
-      sounds.deInitSound = LoadWindowSound(pWindow, "deactivate");
+	  CAPSounds aps;
+	  aps = LoadWindowSound(pWindow, "activate"  );
+	  sounds.initSound   = aps.sound;
+	  sounds.initSound2   = aps.sound2;
+	  aps = LoadWindowSound(pWindow, "deactivate"  );
+      sounds.deInitSound = aps.sound;
+      sounds.deInitSound2 = aps.sound2;
 
       if (id > 0)
         m_windowSoundMap.insert(pair<int, CWindowSounds>(id, sounds));
@@ -341,26 +366,34 @@ bool CGUIAudioManager::Load()
   return true;
 }
 
-IAESound* CGUIAudioManager::LoadSound(const std::string &filename)
+CGUIAudioManager::CAPSounds CGUIAudioManager::LoadSound(const std::string &filename)
 {
   CSingleLock lock(m_cs);
+  CAPSounds aps;
+  aps.sound = aps.sound2 = NULL;
   soundCache::iterator it = m_soundCache.find(filename);
   if (it != m_soundCache.end())
   {
     ++it->second.usage;
-    return it->second.sound;
+	aps.sound = it->second.sound;
+	aps.sound2 = it->second.sound2;
+    return aps;
   }
 
   IAESound *sound = CAEFactory::MakeSound(filename);
   if (!sound)
-    return NULL;
+    return aps;
+  IAESound *sound2 = CAEFactory::MakeSound(filename,true);
 
   CSoundInfo info;
   info.usage = 1;
   info.sound = sound;
+  info.sound2 = sound2;
   m_soundCache[filename] = info;
 
-  return info.sound;
+  aps.sound = info.sound;
+  aps.sound2 = info.sound2;
+  return aps;
 }
 
 void CGUIAudioManager::FreeSound(IAESound *sound)
@@ -370,6 +403,7 @@ void CGUIAudioManager::FreeSound(IAESound *sound)
     if (it->second.sound == sound) {
       if (--it->second.usage == 0) {     
         CAEFactory::FreeSound(sound);
+        if(it->second.sound2) CAEFactory::FreeSound(it->second.sound2);
         m_soundCache.erase(it);
       }
       return;
@@ -383,6 +417,7 @@ void CGUIAudioManager::FreeSoundAllUsage(IAESound *sound)
   for(soundCache::iterator it = m_soundCache.begin(); it != m_soundCache.end(); ++it) {
     if (it->second.sound == sound) {   
       CAEFactory::FreeSound(sound);
+      if(it->second.sound2) CAEFactory::FreeSound(it->second.sound2);
       m_soundCache.erase(it);
       return;
     }
@@ -390,16 +425,19 @@ void CGUIAudioManager::FreeSoundAllUsage(IAESound *sound)
 }
 
 // \brief Load a window node of the config file (sounds.xml)
-IAESound* CGUIAudioManager::LoadWindowSound(TiXmlNode* pWindowNode, const std::string& strIdentifier)
+CGUIAudioManager::CAPSounds CGUIAudioManager::LoadWindowSound(TiXmlNode* pWindowNode, const std::string& strIdentifier)
 {
+  CAPSounds aps;
+  aps.sound = aps.sound2 = NULL;
+
   if (!pWindowNode)
-    return NULL;
+    return aps;
 
   TiXmlNode* pFileNode = pWindowNode->FirstChild(strIdentifier);
   if (pFileNode && pFileNode->FirstChild())
     return LoadSound(URIUtils::AddFileToFolder(m_strMediaDir, pFileNode->FirstChild()->Value()));
 
-  return NULL;
+  return aps;
 }
 
 // \brief Enable/Disable nav sounds
@@ -422,8 +460,10 @@ void CGUIAudioManager::SetVolume(float level)
     actionSoundMap::iterator it = m_actionSoundMap.begin();
     while (it!=m_actionSoundMap.end())
     {
-      if (it->second)
-        it->second->SetVolume(level);
+      if (it->second.sound)
+        it->second.sound->SetVolume(level);
+      if (it->second.sound2)
+        it->second.sound2->SetVolume(level);
       ++it;
     }
   }
@@ -432,16 +472,25 @@ void CGUIAudioManager::SetVolume(float level)
   {
     if (it->second.initSound  ) it->second.initSound  ->SetVolume(level);
     if (it->second.deInitSound) it->second.deInitSound->SetVolume(level);
+    if (it->second.initSound2  ) it->second.initSound2  ->SetVolume(level);
+    if (it->second.deInitSound2) it->second.deInitSound2->SetVolume(level);
   }
 
   {
     pythonSoundsMap::iterator it = m_pythonSounds.begin();
     while (it != m_pythonSounds.end())
     {
-      if (it->second)
-        it->second->SetVolume(level);
+      if (it->second.sound)
+        it->second.sound->SetVolume(level);
+      if (it->second.sound2)
+        it->second.sound2->SetVolume(level);
 
       ++it;
     }
   }
+}
+
+void CGUIAudioManager::CheckAudio2()
+{
+  m_bAudio2 = CSettings::Get().GetBool("audiooutput2.enabled");
 }
