@@ -86,11 +86,12 @@ CDVDVideoCodec* CDVDFactoryCodec::OpenCodec(CDVDVideoCodec* pCodec, CDVDStreamIn
   return NULL;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options )
+CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options, bool bAudio2 /* = false */ )
 {
   try
   {
     CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opening", pCodec->GetName());
+    pCodec->SetAudio2(bAudio2);
     if( pCodec->Open( hints, options ) )
     {
       CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opened", pCodec->GetName());
@@ -340,16 +341,16 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, const C
   return NULL;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint)
+CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec( CDVDStreamInfo &hint, bool bAudio2 /* = false */)
 {
   CDVDAudioCodec* pCodec = NULL;
   CDVDCodecOptions options;
 
   // try passthrough first
-  pCodec = OpenCodec( new CDVDAudioCodecPassthrough(), hint, options );
+  pCodec = OpenCodec( new CDVDAudioCodecPassthrough(), hint, options, bAudio2 );
   if( pCodec ) return pCodec;
 
-  pCodec = OpenCodec( new CDVDAudioCodecFFmpeg(), hint, options );
+  pCodec = OpenCodec( new CDVDAudioCodecFFmpeg(), hint, options, bAudio2 );
   if( pCodec ) return pCodec;
 
   return NULL;
