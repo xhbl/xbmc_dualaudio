@@ -838,6 +838,7 @@ bool CApplication::Create()
   SetHardwareVolume(m_volumeLevel);
   CAEFactory::SetMute     (m_muted);
   CAEFactory::SetSoundMode(CSettings::Get().GetInt("audiooutput.guisoundmode"));
+  CAEFactory::SetSoundMode(CSettings::Get().GetInt("audiooutput2.guisoundmode"),true);
 
   // initialize m_replayGainSettings
   m_replayGainSettings.iType = CSettings::Get().GetInt("musicplayer.replaygaintype");
@@ -1700,6 +1701,22 @@ void CApplication::OnSettingChanged(const CSetting *setting)
       CApplicationMessenger::Get().MediaRestart(false);
     }
   }
+  else if (StringUtils::StartsWithNoCase(settingId, "audiooutput2."))
+  {
+    // AE is master of audio settings and needs to be informed first
+    CAEFactory::OnSettingsChange(settingId,true);
+
+    if (settingId == "audiooutput2.guisoundmode")
+    {
+      CAEFactory::SetSoundMode(((CSettingInt*)setting)->GetValue(),true);
+    }
+    // this tells player whether to open an audio stream passthrough or PCM
+    // if this is changed, audio stream has to be reopened
+    else if (settingId == "audiooutput2.passthrough")
+    {
+      CApplicationMessenger::Get().MediaRestart(false);
+    }
+  }
   else if (StringUtils::EqualsNoCase(settingId, "musicplayer.replaygaintype"))
     m_replayGainSettings.iType = ((CSettingInt*)setting)->GetValue();
   else if (StringUtils::EqualsNoCase(settingId, "musicplayer.replaygainpreamp"))
@@ -1763,6 +1780,25 @@ bool CApplication::OnSettingUpdate(CSetting* &setting, const char *oldSettingId,
       return ret;
     }
   }
+  else if (settingId == "audiooutput2.channels")
+  {
+    // check if this is an update from Eden
+    if (oldSettingId != NULL && oldSettingNode != NULL &&
+        StringUtils::EqualsNoCase(oldSettingId, "audiooutput2.channellayout"))
+    {
+      bool ret = false;
+      CSettingInt* channels = (CSettingInt*)setting;
+      if (channels->FromString(oldSettingNode->FirstChild()->ValueStr()) && channels->GetValue() < AE_CH_LAYOUT_MAX - 1)
+        ret = channels->SetValue(channels->GetValue() + 1);
+
+      // let's just reset the audiodevice settings as well
+      std::string audiodevice = CSettings::Get().GetString("audiooutput2.audiodevice");
+      CAEFactory::VerifyOutputDevice(audiodevice, false);
+      ret |= CSettings::Get().SetString("audiooutput2.audiodevice", audiodevice.c_str());
+
+      return ret;
+    }
+  }
   else if (settingId == "screensaver.mode")
   {
     CSettingString *screensaverMode = (CSettingString*)setting;
@@ -1811,7 +1847,7 @@ bool CApplication::OnSettingUpdate(CSetting* &setting, const char *oldSettingId,
   }
 #endif
 #if defined(TARGET_DARWIN_OSX)
-  else if (settingId == "audiooutput.audiodevice")
+  else if (settingId == "audiooutput.audiodevice" || settingId == "audiooutput2.audiodevice")
   {
     CSettingString *audioDevice = (CSettingString*)setting;
     // Gotham and older didn't enumerate audio devices per stream on osx
