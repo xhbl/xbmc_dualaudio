@@ -146,7 +146,19 @@ bool DVDPlayerCodec::Init(const std::string &strFile, unsigned int filecache)
 
   CDVDStreamInfo hint(*pStream, true);
 
-  m_pAudioCodec = CDVDFactoryCodec::CreateAudioCodec(hint);
+  m_pAudioCodec = CDVDFactoryCodec::CreateAudioCodec(hint, m_bAudio2);
+  if (m_bCheckAudio2)
+  {
+    CDVDAudioCodec* pAudioCodec2 = CDVDFactoryCodec::CreateAudioCodec(hint, true);
+    if (!m_pAudioCodec)
+      m_pAudioCodec = pAudioCodec2;
+    else if (pAudioCodec2)
+    {
+      if (pAudioCodec2->NeedPassthrough() != m_pAudioCodec->NeedPassthrough())
+        m_bReusableForAudio2 = false;
+      delete pAudioCodec2;
+    }
+  }
   if (!m_pAudioCodec)
   {
     CLog::Log(LOGERROR, "%s: Could not create audio codec", __FUNCTION__);
