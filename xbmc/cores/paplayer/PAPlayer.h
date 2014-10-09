@@ -155,6 +155,8 @@ private:
   CEvent              m_jobEvent;
   bool                m_continueStream;
   bool                m_bAudio2;
+  int                 m_iTimeSynced;
+  unsigned int        m_iAudio2DiscardSamples;
 
   bool QueueNextFileEx(const CFileItem &file, bool fadeIn = true, bool job = false);
   void SoftStart(bool wait = false);
@@ -165,6 +167,7 @@ private:
   bool ProcessStream(StreamInfo *si, double &freeBufferTime);
   bool QueueData(StreamInfo *si);
   bool QueueData2(StreamInfo *si);
+  void SyncStreams2();
   int64_t GetTotalTime64();
   void UpdateCrossfadeTime(const CFileItem& file);
   void UpdateStreamInfoPlayNextAtFrame(StreamInfo *si, unsigned int crossFadingTime);
