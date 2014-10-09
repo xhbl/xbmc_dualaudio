@@ -248,6 +248,7 @@ protected:
 
   void   SetSyncType(bool passthrough);
   void   HandleSyncError(double duration);
+  void   HandleSyncAudio2(DVDAudioFrame &audioframe2);
   CDVDErrorAverage m_errors;
   bool   m_syncclock;
 

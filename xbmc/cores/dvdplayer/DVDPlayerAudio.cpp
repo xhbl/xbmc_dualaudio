@@ -784,6 +784,8 @@ void CDVDPlayerAudio::Process()
       SetSyncType(audioframe.passthrough);
 
       // add any packets play
+      if (m_bAudio2)
+        HandleSyncAudio2(audioframe2);
       packetadded = OutputPacket(audioframe, audioframe2);
 
       // we are not running until something is cached in output device
@@ -907,6 +909,43 @@ void CDVDPlayerAudio::HandleSyncError(double duration)
       }
       m_resampleratio = 1.0 / m_pClock->GetClockSpeed() + proportional + m_integral;
     }
+  }
+}
+
+void CDVDPlayerAudio::HandleSyncAudio2(DVDAudioFrame &audioframe2)
+{
+  if(m_bAudio2Dumb)
+  {
+    m_audiodiff = 0.0;
+	return;
+  }
+  if(audioframe2.nb_frames == 0 || audioframe2.planes == 0)
+    return;
+
+  double threshold = 50000.0;
+  threshold = threshold > audioframe2.duration ? threshold : audioframe2.duration;
+
+  double dtm1 = m_dvdAudio.GetDelay();
+  double dtm2 = m_dvdAudio2.GetDelay();
+  double ddiff = (dtm1 - dtm2);
+
+  m_audiodiff = ddiff / DVD_TIME_BASE;
+
+  if (ddiff > threshold)
+  {
+    int size2 = audioframe2.nb_frames * audioframe2.framesize / audioframe2.planes;
+    for (unsigned int i=0; i<audioframe2.planes; i++)
+      memset(audioframe2.data[i], 0, size2);
+    m_dvdAudio2.AddPackets(audioframe2);
+  }
+
+  if (ddiff < -threshold)
+  {
+    m_bAudio2Skip = true;
+  }
+  else if (m_bAudio2Skip && ddiff > 0.0)
+  {
+    m_bAudio2Skip = false;
   }
 }
 
