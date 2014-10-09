@@ -45,6 +45,9 @@ public:
     m_Channels = 0;
     m_Bitrate = 0;
     m_CodecName = "";
+	m_bAudio2 = false;
+    m_bCheckAudio2 = false;
+    m_bReusableForAudio2 = true;
   };
   virtual ~ICodec() {};
 
@@ -110,8 +113,16 @@ public:
   MUSIC_INFO::CMusicInfoTag m_tag;
   XFILE::CFile m_file;
 
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
+  bool IsAudio2() { return m_bAudio2; }
+  void SetCheckAudio2(bool bCheckAudio2){ m_bCheckAudio2 = m_bAudio2 ? false : bCheckAudio2; }
+  bool IsReusableForAudio2(){ return m_bReusableForAudio2; }
+
 protected:
   int m_Channels; /* remove this soon, its being deprecated */
 
+  bool m_bAudio2;
+  bool m_bCheckAudio2;
+  bool m_bReusableForAudio2;
 };
 
