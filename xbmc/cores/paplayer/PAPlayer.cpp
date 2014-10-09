@@ -78,6 +78,8 @@ PAPlayer::PAPlayer(IPlayerCallback& callback) :
 {
   memset(&m_playerGUIData, 0, sizeof(m_playerGUIData));
   m_bAudio2 = false;
+  m_iTimeSynced = 0;
+  m_iAudio2DiscardSamples = 0;
 }
 
 PAPlayer::~PAPlayer()
@@ -707,6 +709,8 @@ void PAPlayer::Process()
     }
 
     GetTimeInternal(); //update for GUI
+
+    SyncStreams2();
   }
 
   if(m_isFinished && !m_bStop)
@@ -1022,9 +1026,14 @@ bool PAPlayer::QueueData(StreamInfo *si)
 
   if (bAudio2)
   {
+    if(samples > m_iAudio2DiscardSamples)
+      samples -= m_iAudio2DiscardSamples;
+    else
+      samples = samples - (samples * si->m_bytesPerSample / si->m_bytesPerFrame * si->m_bytesPerFrame / si->m_bytesPerSample);
     if(samples)
       si->m_stream2->AddData(&data, 0, samples/si->m_channelInfo.Count(), 0);
     si->m_framesSent2 = si->m_framesSent;
+    m_iAudio2DiscardSamples = 0;
   }
 
   const ICodec* codec = si->m_decoder.GetCodec();
@@ -1057,6 +1066,71 @@ bool PAPlayer::QueueData2(StreamInfo *si)
   si->m_framesSent2 += added;
 
   return true;
+}
+
+inline void PAPlayer::SyncStreams2()
+{
+  if(!m_bAudio2)
+    return;
+
+  if(CAEFactory::IsDumb() || CAEFactory::IsDumb(true))
+    return;
+
+  if(!m_currentStream || !m_currentStream->m_stream || !m_currentStream->m_stream2)
+    return;
+
+  if(m_currentStream->m_usedecoder2)
+    return;
+
+  if(m_playbackSpeed != 1)
+    return;
+
+  int iTimeSynced = (int)((double)clock()/CLOCKS_PER_SEC*1000);
+  if(iTimeSynced - m_iTimeSynced < 50)
+    return;
+  m_iTimeSynced = iTimeSynced;
+
+  double time1 = ((double)m_currentStream->m_framesSent / (double)m_currentStream->m_sampleRate);
+  double time2 = ((double)m_currentStream->m_framesSent2 / (double)m_currentStream->m_sampleRate2);
+  time1 -= m_currentStream->m_stream->GetDelay();
+  time2 -= m_currentStream->m_stream2->GetDelay();
+  double timediff = time2 - time1;
+
+  m_iAudio2DiscardSamples = 0;
+  if (timediff > 0.05)
+  {
+    unsigned int padsize = (unsigned int)(timediff * (double)m_currentStream->m_sampleRate2) * m_currentStream->m_bytesPerFrame2;
+    if(padsize > m_currentStream->m_stream2->GetSpace())
+      padsize = (m_currentStream->m_stream2->GetSpace() / m_currentStream->m_bytesPerFrame2) * m_currentStream->m_bytesPerFrame2;
+    if(padsize)
+    {
+      uint8_t* padbuf = (uint8_t*)malloc(padsize);
+      if(padbuf)
+      {
+        memset(padbuf, 0, padsize);
+        m_currentStream->m_stream2->AddData(&padbuf, 0, padsize/m_currentStream->m_bytesPerFrame2, 0);
+        free(padbuf);
+      }
+    }
+  }
+  else if(timediff < -0.05)
+  {
+    unsigned int discardsize = (unsigned int)(-timediff * (double)m_currentStream->m_sampleRate2) * m_currentStream->m_bytesPerFrame2;
+	m_iAudio2DiscardSamples = discardsize / m_currentStream->m_bytesPerSample2;
+    if (m_currentStream->m_usedecoder2)
+    {
+      if(m_iAudio2DiscardSamples > m_currentStream->m_decoder2.GetDataSize())
+        m_currentStream->m_decoder2.ReadSamples(m_iAudio2DiscardSamples - m_currentStream->m_decoder2.GetDataSize());
+      m_iAudio2DiscardSamples = std::min(m_currentStream->m_decoder2.GetDataSize(), m_iAudio2DiscardSamples);
+	  m_iAudio2DiscardSamples = m_iAudio2DiscardSamples * m_currentStream->m_bytesPerSample2 / m_currentStream->m_bytesPerFrame2 * m_currentStream->m_bytesPerFrame2 / m_currentStream->m_bytesPerSample2;
+      if (m_iAudio2DiscardSamples)
+      {
+        m_currentStream->m_decoder2.GetData(m_iAudio2DiscardSamples);
+        m_currentStream->m_framesSent2 += (m_iAudio2DiscardSamples * m_currentStream->m_bytesPerSample2 / m_currentStream->m_bytesPerFrame2);
+      }
+      m_iAudio2DiscardSamples = 0;
+    }
+  }
 }
 
 void PAPlayer::OnExit()
