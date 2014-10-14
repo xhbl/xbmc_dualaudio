@@ -2683,8 +2683,8 @@
           </dependencies>
           <control type="toggle" />
         </setting>
-        <setting id="audiooutput2.normalizelevels" type="boolean" label="346" help="36533">
-          <level>2</level>
+        <setting id="audiooutput2.maintainoriginalvolume" type="boolean" label="346" help="36533">
+          <level>3</level>
           <default>true</default>
           <dependencies>
             <dependency type="enable" setting="audiooutput2.enabled" operator="is">true</dependency>
