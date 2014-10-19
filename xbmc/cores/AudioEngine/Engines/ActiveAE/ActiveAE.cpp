@@ -2387,7 +2387,7 @@ bool CActiveAE::HasStereoAudioChannelCount()
 {
   std::string device = CSettings::Get().GetString(!m_bAudio2 ? "audiooutput.audiodevice" : "audiooutput2.audiodevice");
   int numChannels = (m_sink.GetDeviceType(device) == AE_DEVTYPE_IEC958) ? AE_CH_LAYOUT_2_0 : CSettings::Get().GetInt(!m_bAudio2 ? "audiooutput.channels" : "audiooutput2.channels");
-  bool passthrough = CSettings::Get().GetInt("audiooutput.config") == AE_CONFIG_FIXED ? false : CSettings::Get().GetBool(!m_bAudio2 ? "audiooutput.passthrough" : "audiooutput2.passthrough");
+  bool passthrough = CSettings::Get().GetInt(!m_bAudio2 ? "audiooutput.config" : "audiooutput2.config") == AE_CONFIG_FIXED ? false : CSettings::Get().GetBool(!m_bAudio2 ? "audiooutput.passthrough" : "audiooutput2.passthrough");
   return numChannels == AE_CH_LAYOUT_2_0 && ! (passthrough &&
     CSettings::Get().GetBool(!m_bAudio2 ? "audiooutput.ac3passthrough" : "audiooutput2.ac3passthrough") &&
     CSettings::Get().GetBool(!m_bAudio2 ? "audiooutput.ac3transcode" : "audiooutput2.ac3transcode"));
