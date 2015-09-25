@@ -2766,7 +2766,7 @@
               <option label="34110">10</option> <!-- AE_CH_LAYOUT_7_1 -->
             </options>
           </constraints>
-          <control type="spinner" format="string" />
+          <control type="list" format="string" />
         </setting>
         <setting id="audiooutput2.config" type="integer" label="337" help="36361">
           <level>2</level>
@@ -2781,7 +2781,7 @@
               <option label="420">3</option>
             </options>
           </constraints>
-          <control type="spinner" format="integer" />
+          <control type="list" format="integer" />
         </setting>
         <setting id="audiooutput2.samplerate" type="integer" label="458" help="36523">
           <level>2</level>
@@ -2804,7 +2804,7 @@
               <option label="34128">192000</option>
             </options>
           </constraints>
-          <control type="spinner" format="integer" />
+          <control type="list" format="integer" />
         </setting>
         <setting id="audiooutput2.stereoupmix" type="boolean" label="252" help="36364">
           <level>2</level>
@@ -2833,7 +2833,7 @@
           <constraints>
             <options>aequalitylevels2</options>
           </constraints>
-          <control type="spinner" format="string" />
+          <control type="list" format="string" />
         </setting>
         <setting id="audiooutput2.streamsilence" type="integer" label="421" help="34111">
           <level>1</level>
@@ -2844,7 +2844,7 @@
           <constraints>
             <options>audiostreamsilence2</options>
           </constraints>
-          <control type="spinner" format="string" />
+          <control type="list" format="string" />
         </setting>
       </group>
       <group id="2">
@@ -2861,7 +2861,7 @@
               <option label="34123">0</option> <!-- AE_SOUND_OFF -->
             </options>
           </constraints>
-          <control type="spinner" format="string" />
+          <control type="list" format="string" />
         </setting>
       </group>
       <group id="3">
@@ -2890,10 +2890,10 @@
               </and>
             </dependency>
             <dependency type="enable">
-            	<and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
-            		<condition setting="audiooutput2.passthrough" operator="is">true</condition>
-            	</and>
+              <and>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.passthrough" operator="is">true</condition>
+              </and>
             </dependency>
           </dependencies>
           <constraints>
@@ -2907,10 +2907,10 @@
           <dependencies>
             <dependency type="visible" on="property" name="aesettingvisible2" setting="audiooutput2.config">audiooutput2.passthrough</dependency>
             <dependency type="enable">
-            	<and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
-            		<condition setting="audiooutput2.passthrough" operator="is">true</condition>
-            	</and>
+              <and>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.passthrough" operator="is">true</condition>
+              </and>
             </dependency>
           </dependencies>
           <control type="toggle" />
@@ -2921,7 +2921,7 @@
           <dependencies>
             <dependency type="enable">
               <and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
                 <condition setting="audiooutput2.passthrough" operator="is">true</condition>
                 <condition setting="audiooutput2.ac3passthrough" operator="is">true</condition>
               </and>
@@ -2946,10 +2946,10 @@
               </and>
             </dependency>
             <dependency type="enable">
-            	<and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
-            		<condition setting="audiooutput2.passthrough" operator="is">true</condition>
-            	</and>
+              <and>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.passthrough" operator="is">true</condition>
+              </and>
             </dependency>
           </dependencies>
           <control type="toggle" />
@@ -2960,10 +2960,10 @@
           <dependencies>
             <dependency type="visible" on="property" name="aesettingvisible2" setting="audiooutput2.config">audiooutput2.passthrough</dependency>
             <dependency type="enable">
-            	<and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
-            		<condition setting="audiooutput2.passthrough" operator="is">true</condition>
-            	</and>
+              <and>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.passthrough" operator="is">true</condition>
+              </and>
             </dependency>
           </dependencies>
           <control type="toggle" />
@@ -2979,10 +2979,10 @@
               </and>
             </dependency>
             <dependency type="enable">
-            	<and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
-            		<condition setting="audiooutput2.passthrough" operator="is">true</condition>
-            	</and>
+              <and>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.passthrough" operator="is">true</condition>
+              </and>
             </dependency>
           </dependencies>
           <control type="toggle" />
@@ -2998,10 +2998,10 @@
               </and>
             </dependency>
             <dependency type="enable">
-            	<and>
-            		<condition setting="audiooutput2.enabled" operator="is">true</condition>
-            		<condition setting="audiooutput2.passthrough" operator="is">true</condition>
-            	</and>
+              <and>
+                <condition setting="audiooutput2.enabled" operator="is">true</condition>
+                <condition setting="audiooutput2.passthrough" operator="is">true</condition>
+              </and>
             </dependency>
           </dependencies>
           <control type="toggle" />
