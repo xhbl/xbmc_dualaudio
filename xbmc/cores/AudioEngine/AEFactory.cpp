@@ -57,15 +57,11 @@ bool CAEFactory::LoadEngine()
 
   if (!AE2)
   {
-    switch(engine)
-    {
-      case AE_ENGINE_NULL	  :
-      case AE_ENGINE_ACTIVE   : AE2 = new ActiveAE::CActiveAE(); break;
-      default: break;
-    }
-  
+    AE2 = new ActiveAE::CActiveAE();
+
     if (AE2)
         AE2->SetAudio2(true);
+
     if (AE2 && !AE2->CanInit())
     {
       delete AE2;
