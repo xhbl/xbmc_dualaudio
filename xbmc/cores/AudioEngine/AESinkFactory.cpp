@@ -160,6 +160,9 @@ IAESink *CAESinkFactory::Create(std::string &device, AEAudioFormat &desiredForma
   IAESink       *sink;
   std::string    tmpDevice = device;
 
+  if (device == "NULL")
+    driver = "NULL";
+
   sink = TrySink(driver, tmpDevice, tmpFormat);
   if (sink)
   {
