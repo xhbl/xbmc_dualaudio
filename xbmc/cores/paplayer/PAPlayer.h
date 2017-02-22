@@ -105,10 +105,19 @@ private:
     enum AEDataFormat m_dataFormat;          /* data format of the samples */
     unsigned int      m_bytesPerSample;      /* number of bytes per audio sample */
     unsigned int      m_bytesPerFrame;       /* number of bytes per audio frame */
+    bool              m_usedecoder2;
+    CAudioDecoder     m_decoder2;            /* the stream decoder */
+    CAEChannelInfo    m_channelInfo2;        /* channel layout information */
+    unsigned int      m_sampleRate2;         /* sample rate of the stream */
+    unsigned int      m_encodedSampleRate2;  /* the encoded sample rate of raw streams */
+    enum AEDataFormat m_dataFormat2;         /* data format of the samples */
+    unsigned int      m_bytesPerSample2;     /* number of bytes per audio sample */
+    unsigned int      m_bytesPerFrame2;      /* number of bytes per audio frame */
 
     bool              m_started;             /* if playback of this stream has been started */
     bool              m_finishing;           /* if this stream is finishing */
     int               m_framesSent;          /* number of frames sent to the stream */
+    int               m_framesSent2;         /* number of frames sent to the stream */
     int               m_prepareNextAtFrame;  /* when to prepare the next stream */
     bool              m_prepareTriggered;    /* if the next stream has been prepared */
     int               m_playNextAtFrame;     /* when to start playing the next stream */
@@ -116,8 +125,10 @@ private:
     bool              m_fadeOutTriggered;    /* if the stream has been told to fade out */
     int               m_seekNextAtFrame;     /* the FF/RR sample to seek at */
     int               m_seekFrame;           /* the exact position to seek too, -1 for none */
+    int               m_seekFrame2;          /* the exact position to seek too, -1 for none */
 
     IAEStream*        m_stream;              /* the playback stream */
+    IAEStream*        m_stream2;             /* the playback stream */
     float             m_volume;              /* the initial volume level to set the stream to on creation */
 
     bool              m_isSlaved;            /* true if the stream has been slaved to another */
@@ -147,6 +158,9 @@ private:
   bool                m_continueStream;
   int64_t             m_newForcedPlayerTime;
   int64_t             m_newForcedTotalTime;
+  bool                m_bAudio2;
+  int                 m_iTimeSynced;
+  unsigned int        m_iAudio2DiscardSamples;
 
   bool QueueNextFileEx(const CFileItem &file, bool fadeIn = true, bool job = false);
   void SoftStart(bool wait = false);
@@ -156,6 +170,8 @@ private:
   bool PrepareStream(StreamInfo *si);
   bool ProcessStream(StreamInfo *si, double &freeBufferTime);
   bool QueueData(StreamInfo *si);
+  bool QueueData2(StreamInfo *si);
+  void SyncStreams2();
   int64_t GetTotalTime64();
   void UpdateCrossfadeTime(const CFileItem& file);
   void UpdateStreamInfoPlayNextAtFrame(StreamInfo *si, unsigned int crossFadingTime);
