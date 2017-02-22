@@ -37,6 +37,9 @@ CAudioDecoder::CAudioDecoder()
   m_status = STATUS_NO_FILE;
   m_canPlay = false;
 
+  m_bAudio2 = false;
+  m_bCheckAudio2 = false;
+
   // output buffer (for transferring data from the Pcm Buffer to the rest of the audio chain)
   memset(&m_outputBuffer, 0, OUTPUT_SAMPLES * sizeof(float));
   memset(&m_pcmInputBuffer, 0, INPUT_SIZE * sizeof(BYTE));
@@ -83,6 +86,11 @@ bool CAudioDecoder::Create(const CFileItem &file, int64_t seekOffset)
 
   // create our codec
   m_codec=CodecFactory::CreateCodecDemux(file.GetPath(), file.GetMimeType(), filecache * 1024);
+  if (m_codec)
+  {
+    m_codec->SetAudio2(m_bAudio2);
+    m_codec->SetCheckAudio2(m_bCheckAudio2);
+  }
 
   if (!m_codec || !m_codec->Init(file.GetPath(), filecache * 1024))
   {
