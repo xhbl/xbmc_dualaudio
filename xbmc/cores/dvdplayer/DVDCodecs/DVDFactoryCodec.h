@@ -37,10 +37,10 @@ class CDVDFactoryCodec
 {
 public:
   static CDVDVideoCodec* CreateVideoCodec(CDVDStreamInfo &hint, const CRenderInfo &info = CRenderInfo());
-  static CDVDAudioCodec* CreateAudioCodec(CDVDStreamInfo &hint );
+  static CDVDAudioCodec* CreateAudioCodec(CDVDStreamInfo &hint, bool bAudio2 = false );
   static CDVDOverlayCodec* CreateOverlayCodec(CDVDStreamInfo &hint );
 
-  static CDVDAudioCodec* OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options );
+  static CDVDAudioCodec* OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options, bool bAudio2 = false );
   static CDVDVideoCodec* OpenCodec(CDVDVideoCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options );
   static CDVDOverlayCodec* OpenCodec(CDVDOverlayCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options );
 };
