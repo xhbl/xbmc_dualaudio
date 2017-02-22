@@ -654,6 +654,7 @@ bool CApplication::Create()
   SetHardwareVolume(m_volumeLevel);
   CAEFactory::SetMute     (m_muted);
   CAEFactory::SetSoundMode(CSettings::GetInstance().GetInt(CSettings::SETTING_AUDIOOUTPUT_GUISOUNDMODE));
+  CAEFactory::SetSoundMode(CSettings::GetInstance().GetInt(CSettings::SETTING_AUDIOOUTPUT2_GUISOUNDMODE),true);
 
   // initialize m_replayGainSettings
   m_replayGainSettings.iType = CSettings::GetInstance().GetInt(CSettings::SETTING_MUSICPLAYER_REPLAYGAINTYPE);
@@ -1440,6 +1441,38 @@ void CApplication::OnSettingChanged(const CSetting *setting)
       CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_RESTART);
     }
   }
+  else if (StringUtils::StartsWithNoCase(settingId, "audiooutput2."))
+  {
+    if (settingId == CSettings::SETTING_AUDIOOUTPUT2_DSPADDONSENABLED)
+    {
+      if (((CSettingBool *) setting)->GetValue())
+      {
+        CApplicationMessenger::GetInstance().PostMsg(TMSG_SETAUDIODSPSTATE, ACTIVE_AE_DSP_STATE_ON, ACTIVE_AE_DSP_SYNC_ACTIVATE);
+        CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_RESTART); // send non blocking media restart message
+      }
+      else
+      {
+        CAEFactory::OnSettingsChange(settingId,true);
+        CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_RESTART); // send non blocking media restart message
+        CApplicationMessenger::GetInstance().PostMsg(TMSG_SETAUDIODSPSTATE, ACTIVE_AE_DSP_STATE_OFF);
+      }
+      return;
+    }
+
+    // AE is master of audio settings and needs to be informed first
+    CAEFactory::OnSettingsChange(settingId,true);
+
+    if (settingId == CSettings::SETTING_AUDIOOUTPUT2_GUISOUNDMODE)
+    {
+      CAEFactory::SetSoundMode(((CSettingInt*)setting)->GetValue());
+    }
+    // this tells player whether to open an audio stream passthrough or PCM
+    // if this is changed, audio stream has to be reopened
+    else if (settingId == CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGH)
+    {
+      CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_RESTART);
+    }
+  }
   else if (StringUtils::EqualsNoCase(settingId, CSettings::SETTING_MUSICPLAYER_REPLAYGAINTYPE))
     m_replayGainSettings.iType = ((CSettingInt*)setting)->GetValue();
   else if (StringUtils::EqualsNoCase(settingId, CSettings::SETTING_MUSICPLAYER_REPLAYGAINPREAMP))
@@ -1504,7 +1537,7 @@ bool CApplication::OnSettingUpdate(CSetting* &setting, const char *oldSettingId,
   }
 #endif
 #if defined(TARGET_DARWIN_OSX)
-  if (setting->GetId() == CSettings::SETTING_AUDIOOUTPUT_AUDIODEVICE)
+  if (setting->GetId() == CSettings::SETTING_AUDIOOUTPUT_AUDIODEVICE || setting->GetId() == CSettings::SETTING_AUDIOOUTPUT2_AUDIODEVICE)
   {
     CSettingString *audioDevice = (CSettingString*)setting;
     // Gotham and older didn't enumerate audio devices per stream on osx
