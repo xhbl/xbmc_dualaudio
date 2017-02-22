@@ -1453,6 +1453,7 @@ void CApplication::OnSettingChanged(const CSetting *setting)
       else
       {
         CAEFactory::OnSettingsChange(settingId,true);
+        g_audioManager.CheckAudio2();
         CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_RESTART); // send non blocking media restart message
         CApplicationMessenger::GetInstance().PostMsg(TMSG_SETAUDIODSPSTATE, ACTIVE_AE_DSP_STATE_OFF);
       }
@@ -1461,6 +1462,7 @@ void CApplication::OnSettingChanged(const CSetting *setting)
 
     // AE is master of audio settings and needs to be informed first
     CAEFactory::OnSettingsChange(settingId,true);
+    g_audioManager.CheckAudio2();
 
     if (settingId == CSettings::SETTING_AUDIOOUTPUT2_GUISOUNDMODE)
     {
