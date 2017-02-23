@@ -195,7 +195,7 @@ void CGUIAudioManager::PlayPythonSound(const std::string& strFileName, bool useC
   if (!aps.sound)
     return;
 
-  m_pythonSounds.insert(pair<const std::string, CAPSounds>(strFileName, aps));
+  m_pythonSounds.insert(std::pair<const std::string, CAPSounds>(strFileName, aps));
   aps.sound->Play();
   if (m_bAudio2 && aps.sound2)
     aps.sound2->Play();
@@ -314,7 +314,7 @@ bool CGUIAudioManager::Load()
         std::string filename = URIUtils::AddFileToFolder(m_strMediaDir, strFile);
         CAPSounds aps = LoadSound(filename);
         if (aps.sound)
-          m_actionSoundMap.insert(pair<int, CAPSounds>(id, aps));
+          m_actionSoundMap.insert(std::pair<int, CAPSounds>(id, aps));
       }
 
       pAction = pAction->NextSibling();

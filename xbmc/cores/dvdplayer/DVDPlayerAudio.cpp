@@ -773,9 +773,12 @@ void CDVDPlayerAudio::Process()
       int size = audioframe.nb_frames * audioframe.framesize / audioframe.planes;
       for (unsigned int i=0; i<audioframe.planes; i++)
         memset(audioframe.data[i], 0, size);
-      int size2 = audioframe2.nb_frames * audioframe2.framesize / audioframe2.planes;
-      for (unsigned int i=0; i<audioframe2.planes; i++)
-        memset(audioframe2.data[i], 0, size2);
+      if (m_bAudio2 )
+      {
+        int size2 = audioframe2.nb_frames * audioframe2.framesize / audioframe2.planes;
+        for (unsigned int i=0; i<audioframe2.planes; i++)
+          memset(audioframe2.data[i], 0, size2);
+      }
     }
 
     if(result & DECODE_FLAG_DROP)
