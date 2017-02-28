@@ -372,6 +372,30 @@ const std::string CSettings::SETTING_AUDIOOUTPUT_DTSPASSTHROUGH = "audiooutput.d
 const std::string CSettings::SETTING_AUDIOOUTPUT_TRUEHDPASSTHROUGH = "audiooutput.truehdpassthrough";
 const std::string CSettings::SETTING_AUDIOOUTPUT_DTSHDPASSTHROUGH = "audiooutput.dtshdpassthrough";
 const std::string CSettings::SETTING_AUDIOOUTPUT_VOLUMESTEPS = "audiooutput.volumesteps";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_ENABLED = "audiooutput2.enabled";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_AUDIODEVICE = "audiooutput2.audiodevice";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_CHANNELS = "audiooutput2.channels";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_CONFIG = "audiooutput2.config";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_SAMPLERATE = "audiooutput2.samplerate";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_STEREOUPMIX = "audiooutput2.stereoupmix";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_MAINTAINORIGINALVOLUME = "audiooutput2.maintainoriginalvolume";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_PROCESSQUALITY = "audiooutput2.processquality";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_ATEMPOTHRESHOLD = "audiooutput2.atempothreshold";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_STREAMSILENCE = "audiooutput2.streamsilence";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_STREAMNOISE = "audiooutput2.streamnoise";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_DSPADDONSENABLED = "audiooutput2.dspaddonsenabled";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_DSPSETTINGS = "audiooutput2.dspsettings";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_DSPRESETDB = "audiooutput2.dspresetdb";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_GUISOUNDMODE = "audiooutput2.guisoundmode";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGH = "audiooutput2.passthrough";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGHDEVICE = "audiooutput2.passthroughdevice";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_AC3PASSTHROUGH = "audiooutput2.ac3passthrough";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_AC3TRANSCODE = "audiooutput2.ac3transcode";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_EAC3PASSTHROUGH = "audiooutput2.eac3passthrough";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_DTSPASSTHROUGH = "audiooutput2.dtspassthrough";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_TRUEHDPASSTHROUGH = "audiooutput2.truehdpassthrough";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_DTSHDPASSTHROUGH = "audiooutput2.dtshdpassthrough";
+const std::string CSettings::SETTING_AUDIOOUTPUT2_VOLUMESTEPS = "audiooutput2.volumesteps";
 const std::string CSettings::SETTING_INPUT_PERIPHERALS = "input.peripherals";
 const std::string CSettings::SETTING_INPUT_ENABLEMOUSE = "input.enablemouse";
 const std::string CSettings::SETTING_INPUT_ASKNEWCONTROLLERS = "input.asknewcontrollers";
@@ -564,9 +588,11 @@ void CSettings::Uninitialize()
   m_settingsManager->UnregisterSettingOptionsFiller("audiocdactions");
   m_settingsManager->UnregisterSettingOptionsFiller("audiocdencoders");
   m_settingsManager->UnregisterSettingOptionsFiller("aequalitylevels");
+  m_settingsManager->UnregisterSettingOptionsFiller("aequalitylevels2");
   m_settingsManager->UnregisterSettingOptionsFiller("audiodevices");
   m_settingsManager->UnregisterSettingOptionsFiller("audiodevicespassthrough");
   m_settingsManager->UnregisterSettingOptionsFiller("audiostreamsilence");
+  m_settingsManager->UnregisterSettingOptionsFiller("audiostreamsilence2");
   m_settingsManager->UnregisterSettingOptionsFiller("charsets");
   m_settingsManager->UnregisterSettingOptionsFiller("epgguideviews");
   m_settingsManager->UnregisterSettingOptionsFiller("fontheights");
@@ -913,6 +939,8 @@ void CSettings::InitializeDefaults()
 #if !defined(TARGET_WINDOWS)
   ((CSettingString*)m_settingsManager->GetSetting(CSettings::SETTING_AUDIOOUTPUT_AUDIODEVICE))->SetDefault(CAEFactory::GetDefaultDevice(false));
   ((CSettingString*)m_settingsManager->GetSetting(CSettings::SETTING_AUDIOOUTPUT_PASSTHROUGHDEVICE))->SetDefault(CAEFactory::GetDefaultDevice(true));
+  ((CSettingString*)m_settingsManager->GetSetting(CSettings::SETTING_AUDIOOUTPUT2_AUDIODEVICE))->SetDefault(CAEFactory::GetDefaultDevice(false,true));
+  ((CSettingString*)m_settingsManager->GetSetting(CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGHDEVICE))->SetDefault(CAEFactory::GetDefaultDevice(true,true));
 #endif
 
   if (g_application.IsStandAlone())
@@ -926,9 +954,11 @@ void CSettings::InitializeOptionFillers()
   m_settingsManager->RegisterSettingOptionsFiller("audiocdactions", MEDIA_DETECT::CAutorun::SettingOptionAudioCdActionsFiller);
 #endif
   m_settingsManager->RegisterSettingOptionsFiller("aequalitylevels", CAEFactory::SettingOptionsAudioQualityLevelsFiller);
+  m_settingsManager->RegisterSettingOptionsFiller("aequalitylevels2", CAEFactory::SettingOptionsAudioQualityLevelsFiller);
   m_settingsManager->RegisterSettingOptionsFiller("audiodevices", CAEFactory::SettingOptionsAudioDevicesFiller);
   m_settingsManager->RegisterSettingOptionsFiller("audiodevicespassthrough", CAEFactory::SettingOptionsAudioDevicesPassthroughFiller);
   m_settingsManager->RegisterSettingOptionsFiller("audiostreamsilence", CAEFactory::SettingOptionsAudioStreamsilenceFiller);
+  m_settingsManager->RegisterSettingOptionsFiller("audiostreamsilence2", CAEFactory::SettingOptionsAudioStreamsilenceFiller);
   m_settingsManager->RegisterSettingOptionsFiller("charsets", CCharsetConverter::SettingOptionsCharsetsFiller);
   m_settingsManager->RegisterSettingOptionsFiller("fonts", GUIFontManager::SettingOptionsFontsFiller);
   m_settingsManager->RegisterSettingOptionsFiller("languagenames", CLangInfo::SettingOptionsLanguageNamesFiller);
@@ -1084,6 +1114,27 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_STREAMNOISE);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_MAINTAINORIGINALVOLUME);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_DSPADDONSENABLED);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_ENABLED);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_CONFIG);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_SAMPLERATE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGH);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_CHANNELS);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_PROCESSQUALITY);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_ATEMPOTHRESHOLD);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_GUISOUNDMODE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_STEREOUPMIX);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_AC3PASSTHROUGH);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_AC3TRANSCODE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_EAC3PASSTHROUGH);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_DTSPASSTHROUGH);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_TRUEHDPASSTHROUGH);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_DTSHDPASSTHROUGH);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_AUDIODEVICE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGHDEVICE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_STREAMSILENCE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_STREAMNOISE);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_MAINTAINORIGINALVOLUME);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_DSPADDONSENABLED);
   settingSet.insert(CSettings::SETTING_LOOKANDFEEL_SKIN);
   settingSet.insert(CSettings::SETTING_LOOKANDFEEL_SKINSETTINGS);
   settingSet.insert(CSettings::SETTING_LOOKANDFEEL_FONT);
@@ -1104,6 +1155,7 @@ void CSettings::InitializeISettingCallbacks()
   settingSet.insert(CSettings::SETTING_VIDEOPLAYER_USEMEDIACODEC);
   settingSet.insert(CSettings::SETTING_VIDEOPLAYER_USEMEDIACODECSURFACE);
   settingSet.insert(CSettings::SETTING_AUDIOOUTPUT_VOLUMESTEPS);
+  settingSet.insert(CSettings::SETTING_AUDIOOUTPUT2_VOLUMESTEPS);
   settingSet.insert(CSettings::SETTING_SOURCE_VIDEOS);
   settingSet.insert(CSettings::SETTING_SOURCE_MUSIC);
   settingSet.insert(CSettings::SETTING_SOURCE_PICTURES);
