@@ -101,5 +101,19 @@
         </setting>
       </group>
     </category>
+    <category id="audio2">
+      <group id="1">
+        <setting id="audiooutput2.processquality">
+          <default>101</default> <!-- AE_QUALITY_GPU -->
+        </setting>
+        <setting id="audiooutput2.atempothreshold">
+          <default>100</default> <!-- disabled -->
+        </setting>
+      </group>
+      <group id="3">
+        <setting id="audiooutput2.ac3transcode" help="37024">
+        </setting>
+      </group>
+    </category>
   </section>
 </settings>
