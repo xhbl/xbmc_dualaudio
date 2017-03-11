@@ -56,44 +56,44 @@ bool CDVDAudioCodecPassthrough::Open(CDVDStreamInfo &hints, CDVDCodecOptions &op
     case AV_CODEC_ID_AC3:
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_AC3;
       format.m_streamInfo.m_sampleRate = hints.samplerate;
-      m_processInfo.SetAudioDecoderName("PT_AC3");
+      m_processInfo.SetAudioDecoderName("PT_AC3", m_bAudio2);
       break;
 
     case AV_CODEC_ID_EAC3:
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_EAC3;
       format.m_streamInfo.m_sampleRate = hints.samplerate;
-      m_processInfo.SetAudioDecoderName("PT_EAC3");
+      m_processInfo.SetAudioDecoderName("PT_EAC3", m_bAudio2);
       break;
 
     case AV_CODEC_ID_DTS:
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_DTSHD;
       format.m_streamInfo.m_sampleRate = hints.samplerate;
-      m_processInfo.SetAudioDecoderName("PT_DTSHD");
+      m_processInfo.SetAudioDecoderName("PT_DTSHD", m_bAudio2);
       break;
 
     case AV_CODEC_ID_TRUEHD:
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_TRUEHD;
       format.m_streamInfo.m_sampleRate = hints.samplerate;
       m_trueHDBuffer.reset(new uint8_t[TRUEHD_BUF_SIZE]);
-      m_processInfo.SetAudioDecoderName("PT_TRUEHD");
+      m_processInfo.SetAudioDecoderName("PT_TRUEHD", m_bAudio2);
       break;
 
     default:
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_NULL;
   }
 
-  bool ret = CAEFactory::SupportsRaw(format);
+  bool ret = CAEFactory::SupportsRaw(format, m_bAudio2);
 
   m_parser.SetCoreOnly(false);
   if (!ret && hints.codec == AV_CODEC_ID_DTS)
   {
     format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_DTSHD_CORE;
-    ret = CAEFactory::SupportsRaw(format);
+    ret = CAEFactory::SupportsRaw(format, m_bAudio2);
 
     // only get the dts core from the parser if we don't support dtsHD
     m_parser.SetCoreOnly(true);
 
-    m_processInfo.SetAudioDecoderName("PT_DTS");
+    m_processInfo.SetAudioDecoderName("PT_DTS", m_bAudio2);
   }
 
   m_dataSize = 0;

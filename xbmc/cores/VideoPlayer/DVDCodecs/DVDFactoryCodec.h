@@ -42,10 +42,10 @@ public:
                                           CProcessInfo &processInfo,
                                           const CRenderInfo &info = CRenderInfo());
   static CDVDAudioCodec* CreateAudioCodec(CDVDStreamInfo &hint, CProcessInfo &processInfo,
-                                          bool allowpassthrough = true, bool allowdtshddecode = true);
+                                          bool allowpassthrough = true, bool allowdtshddecode = true, bool bAudio2 = false);
   static CDVDOverlayCodec* CreateOverlayCodec(CDVDStreamInfo &hint );
 
-  static CDVDAudioCodec* OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options );
+  static CDVDAudioCodec* OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options, bool bAudio2 = false );
   static CDVDVideoCodec* OpenCodec(CDVDVideoCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options );
   static CDVDOverlayCodec* OpenCodec(CDVDOverlayCodec* pCodec, CDVDStreamInfo &hint, CDVDCodecOptions &options );
 };

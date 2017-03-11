@@ -76,11 +76,12 @@ CDVDVideoCodec* CDVDFactoryCodec::OpenCodec(CDVDVideoCodec* pCodec, CDVDStreamIn
   return nullptr;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options )
+CDVDAudioCodec* CDVDFactoryCodec::OpenCodec(CDVDAudioCodec* pCodec, CDVDStreamInfo &hints, CDVDCodecOptions &options, bool bAudio2 /* = false */ )
 {
   try
   {
     CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opening", pCodec->GetName());
+    pCodec->SetAudio2(bAudio2);
     if( pCodec->Open( hints, options ) )
     {
       CLog::Log(LOGDEBUG, "FactoryCodec - Audio: %s - Opened", pCodec->GetName());
@@ -173,7 +174,7 @@ CDVDVideoCodec* CDVDFactoryCodec::CreateVideoCodec(CDVDStreamInfo &hint, CProces
   return nullptr;;
 }
 
-CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProcessInfo &processInfo, bool allowpassthrough, bool allowdtshddecode)
+CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProcessInfo &processInfo, bool allowpassthrough, bool allowdtshddecode, bool bAudio2)
 {
   CDVDAudioCodec* pCodec = NULL;
   CDVDCodecOptions options;
@@ -184,12 +185,12 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProces
   // we don't use passthrough if "sync playback to display" is enabled
   if (allowpassthrough)
   {
-    pCodec = OpenCodec(new CDVDAudioCodecPassthrough(processInfo), hint, options);
+    pCodec = OpenCodec(new CDVDAudioCodecPassthrough(processInfo), hint, options, bAudio2);
     if (pCodec)
       return pCodec;
   }
 
-  pCodec = OpenCodec(new CDVDAudioCodecFFmpeg(processInfo), hint, options);
+  pCodec = OpenCodec(new CDVDAudioCodecFFmpeg(processInfo), hint, options, bAudio2);
   if (pCodec)
     return pCodec;
 
