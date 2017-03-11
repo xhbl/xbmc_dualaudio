@@ -238,6 +238,7 @@ EINTERLACEMETHOD CProcessInfo::GetDeinterlacingMethodDefault()
 // player audio info
 void CProcessInfo::ResetAudioCodecInfo()
 {
+ {
   CSingleLock lock(m_audioCodecSection);
 
   m_audioDecoderName = "unknown";
@@ -249,10 +250,34 @@ void CProcessInfo::ResetAudioCodecInfo()
   CServiceBroker::GetDataCacheCore().SetAudioChannels(m_audioChannels);
   CServiceBroker::GetDataCacheCore().SetAudioSampleRate(m_audioSampleRate);
   CServiceBroker::GetDataCacheCore().SetAudioBitsPerSample(m_audioBitsPerSample);
+ }
+ {
+  CSingleLock lock(m_audio2CodecSection);
+
+  m_audio2DecoderName = "unknown";
+  m_audio2Channels = "unknown";
+  m_audio2SampleRate = 0;;
+  m_audio2BitsPerSample = 0;
+
+  CServiceBroker::GetDataCacheCore().SetAudioDecoderName(m_audio2DecoderName, true);
+  CServiceBroker::GetDataCacheCore().SetAudioChannels(m_audio2Channels, true);
+  CServiceBroker::GetDataCacheCore().SetAudioSampleRate(m_audio2SampleRate, true);
+  CServiceBroker::GetDataCacheCore().SetAudioBitsPerSample(m_audio2BitsPerSample, true);
+ }
 }
 
-void CProcessInfo::SetAudioDecoderName(std::string name)
+void CProcessInfo::SetAudioDecoderName(std::string name, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    m_audio2DecoderName = name;
+	  
+    CServiceBroker::GetDataCacheCore().SetAudioDecoderName(m_audio2DecoderName, true);
+    return;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   m_audioDecoderName = name;
@@ -260,15 +285,32 @@ void CProcessInfo::SetAudioDecoderName(std::string name)
   CServiceBroker::GetDataCacheCore().SetAudioDecoderName(m_audioDecoderName);
 }
 
-std::string CProcessInfo::GetAudioDecoderName()
+std::string CProcessInfo::GetAudioDecoderName(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    return m_audio2DecoderName;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   return m_audioDecoderName;
 }
 
-void CProcessInfo::SetAudioChannels(std::string channels)
+void CProcessInfo::SetAudioChannels(std::string channels, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    m_audio2Channels = channels;
+	  
+    CServiceBroker::GetDataCacheCore().SetAudioChannels(m_audio2Channels, true);
+    return;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   m_audioChannels = channels;
@@ -276,15 +318,32 @@ void CProcessInfo::SetAudioChannels(std::string channels)
   CServiceBroker::GetDataCacheCore().SetAudioChannels(m_audioChannels);
 }
 
-std::string CProcessInfo::GetAudioChannels()
+std::string CProcessInfo::GetAudioChannels(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    return m_audio2Channels;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   return m_audioChannels;
 }
 
-void CProcessInfo::SetAudioSampleRate(int sampleRate)
+void CProcessInfo::SetAudioSampleRate(int sampleRate, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    m_audio2SampleRate = sampleRate;
+	  
+    CServiceBroker::GetDataCacheCore().SetAudioSampleRate(m_audio2SampleRate, true);
+    return;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   m_audioSampleRate = sampleRate;
@@ -292,15 +351,32 @@ void CProcessInfo::SetAudioSampleRate(int sampleRate)
   CServiceBroker::GetDataCacheCore().SetAudioSampleRate(m_audioSampleRate);
 }
 
-int CProcessInfo::GetAudioSampleRate()
+int CProcessInfo::GetAudioSampleRate(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    return m_audio2SampleRate;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   return m_audioSampleRate;
 }
 
-void CProcessInfo::SetAudioBitsPerSample(int bitsPerSample)
+void CProcessInfo::SetAudioBitsPerSample(int bitsPerSample, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    m_audio2BitsPerSample = bitsPerSample;
+	  
+    CServiceBroker::GetDataCacheCore().SetAudioBitsPerSample(m_audio2BitsPerSample, true);
+    return;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   m_audioBitsPerSample = bitsPerSample;
@@ -308,8 +384,15 @@ void CProcessInfo::SetAudioBitsPerSample(int bitsPerSample)
   CServiceBroker::GetDataCacheCore().SetAudioBitsPerSample(m_audioBitsPerSample);
 }
 
-int CProcessInfo::GetAudioBitsPerSample()
+int CProcessInfo::GetAudioBitsPerSample(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2CodecSection);
+	  
+    return m_audio2BitsPerSample;
+  }
+
   CSingleLock lock(m_audioCodecSection);
 
   return m_audioBitsPerSample;
