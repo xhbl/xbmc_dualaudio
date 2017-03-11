@@ -50,7 +50,7 @@ public:
   float GetCurrentAttenuation();
   void Pause();
   void Resume();
-  bool Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool needresampler);
+  bool Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool needresampler, bool bAudio2 = false);
   bool IsValidFormat(const DVDAudioFrame &audioframe);
   void Destroy();
   unsigned int AddPackets(const DVDAudioFrame &audioframe);
@@ -87,4 +87,6 @@ protected:
 
   std::atomic_bool m_bAbort;
   CDVDClock *m_pClock;
+
+  bool m_bAudio2;
 };

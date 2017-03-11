@@ -35,6 +35,25 @@ class CVideoPlayer;
 class CDVDAudioCodec;
 class CDVDAudioCodec;
 
+class CAudio2Frames
+{
+public:
+  CAudio2Frames();
+  ~CAudio2Frames();
+  void Add(DVDAudioFrame af);
+  bool Merge(DVDAudioFrame& af);
+  void Clear();
+
+protected:
+  uint8_t*                  data[16];
+  unsigned int              size[16];
+  unsigned int              capa[16];
+  unsigned int              incr;
+  unsigned int              plns;
+  unsigned int              pcap;
+  std::list<DVDAudioFrame>  afs;
+};
+
 class CVideoPlayerAudio : public CThread, public IDVDStreamPlayerAudio
 {
 public:
@@ -55,7 +74,7 @@ public:
   void SendMessage(CDVDMsg* pMsg, int priority = 0)     { m_messageQueue.Put(pMsg, priority); }
   void FlushMessages()                                  { m_messageQueue.Flush(); }
 
-  void SetDynamicRangeCompression(long drc)             { m_dvdAudio.SetDynamicRangeCompression(drc); }
+  void SetDynamicRangeCompression(long drc)             { m_dvdAudio.SetDynamicRangeCompression(drc); if(m_bAudio2) m_dvdAudio2.SetDynamicRangeCompression(drc); }
   float GetDynamicRangeAmplification() const            { return 0.0f; }
 
 
@@ -78,7 +97,7 @@ protected:
   virtual void Process();
 
   void UpdatePlayerInfo();
-  void OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec);
+  void OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec, CDVDAudioCodec* codec2);
   //! Switch codec if needed. Called when the sample rate gotten from the
   //! codec changes, in which case we may want to switch passthrough on/off.
   bool SwitchCodecIfNeeded();
@@ -89,9 +108,13 @@ protected:
 
   double m_audioClock;
 
+  CAudio2Frames m_audio2frames;
+
   CDVDAudio m_dvdAudio; // audio output device
+  CDVDAudio m_dvdAudio2; // audio output device 2
   CDVDClock* m_pClock; // dvd master clock
   CDVDAudioCodec* m_pAudioCodec; // audio codec
+  CDVDAudioCodec* m_pAudioCodec2; // audio codec 2
   BitstreamStats m_audioStats;
 
   int m_speed;
@@ -100,7 +123,7 @@ protected:
   IDVDStreamPlayer::ESyncState m_syncState;
   XbmcThreads::EndTime m_syncTimer;
 
-  bool OutputPacket(DVDAudioFrame &audioframe);
+  bool OutputPacket(DVDAudioFrame &audioframe, DVDAudioFrame &audioframe2);
 
   //SYNC_DISCON, SYNC_SKIPDUP, SYNC_RESAMPLE
   int    m_synctype;
@@ -108,6 +131,7 @@ protected:
   int    m_prevsynctype; //so we can print to the log
 
   void   SetSyncType(bool passthrough);
+  void   HandleSyncAudio2(DVDAudioFrame &audioframe2);
 
   bool   m_prevskipped;
   double m_maxspeedadjust;
@@ -126,5 +150,10 @@ protected:
 
   CCriticalSection m_info_section;
   SInfo            m_info;
+
+  bool   m_bAudio2;
+  bool   m_bAudio2Skip;
+  bool   m_bAudio2Dumb;
+  double m_audiodiff;
 };
 
