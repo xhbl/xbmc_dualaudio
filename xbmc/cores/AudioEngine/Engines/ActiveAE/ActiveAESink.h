@@ -39,6 +39,7 @@ struct SinkReply
   float cacheTotal;
   float latency;
   bool hasVolume;
+  bool isNull;
 };
 
 class CSinkControlProtocol : public Protocol
@@ -97,6 +98,7 @@ public:
   bool DeviceExist(std::string driver, const std::string& device);
   CSinkControlProtocol m_controlPort;
   CSinkDataProtocol m_dataPort;
+  void SetAudio2(bool bAudio2){ m_bAudio2 = bAudio2; }
 
 protected:
   void Process() override;
@@ -147,6 +149,7 @@ protected:
   CAEBitstreamPacker *m_packer;
   bool m_needIecPack;
   bool m_streamNoise;
+  bool m_bAudio2;
 };
 
 }
