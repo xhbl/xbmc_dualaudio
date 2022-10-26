@@ -160,6 +160,9 @@ public:
   void STDMETHODCALLTYPE NotifyAE()
   {
     if(!CWin32PowerSyscall::IsSuspending())
+    {
       CServiceBroker::GetActiveAE()->DeviceChange();
+      if(CServiceBroker::GetActiveAE(true)) CServiceBroker::GetActiveAE(true)->DeviceChange();
+    }
   }
 };

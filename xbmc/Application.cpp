@@ -527,11 +527,15 @@ bool CApplication::Create(const CAppParamParser &params)
 
   m_pActiveAE.reset(new ActiveAE::CActiveAE());
   m_pActiveAE->Start();
-  CServiceBroker::RegisterAE(m_pActiveAE.get());
+  m_pActiveAE2.reset(new ActiveAE::CActiveAE(true));
+  if(m_pActiveAE2)
+    m_pActiveAE2->Start();
+  CServiceBroker::RegisterAE(m_pActiveAE.get(), m_pActiveAE2.get());
 
   // restore AE's previous volume state
   SetHardwareVolume(m_volumeLevel);
   CServiceBroker::GetActiveAE()->SetMute(m_muted);
+  if(CServiceBroker::GetActiveAE(true)) CServiceBroker::GetActiveAE(true)->SetMute(m_muted);
 
   // initialize m_replayGainSettings
   m_replayGainSettings.iType = settings->GetInt(CSettings::SETTING_MUSICPLAYER_REPLAYGAINTYPE);
@@ -1066,7 +1070,7 @@ void CApplication::OnSettingChanged(const std::shared_ptr<const CSetting>& setti
     if (CServiceBroker::GetWinSystem()->GetGfxContext().IsFullScreenRoot())
       CServiceBroker::GetWinSystem()->GetGfxContext().SetVideoResolution(CServiceBroker::GetWinSystem()->GetGfxContext().GetVideoResolution(), true);
   }
-  else if (settingId == CSettings::SETTING_AUDIOOUTPUT_PASSTHROUGH)
+  else if (settingId == CSettings::SETTING_AUDIOOUTPUT_PASSTHROUGH || settingId == CSettings::SETTING_AUDIOOUTPUT2_PASSTHROUGH)
   {
     CApplicationMessenger::GetInstance().PostMsg(TMSG_MEDIA_RESTART);
   }
@@ -1132,7 +1136,7 @@ bool CApplication::OnSettingUpdate(const std::shared_ptr<CSetting>& setting,
     return false;
 
 #if defined(TARGET_DARWIN_OSX)
-  if (setting->GetId() == CSettings::SETTING_AUDIOOUTPUT_AUDIODEVICE)
+  if (setting->GetId() == CSettings::SETTING_AUDIOOUTPUT_AUDIODEVICE || setting->GetId() == CSettings::SETTING_AUDIOOUTPUT2_AUDIODEVICE)
   {
     std::shared_ptr<CSettingString> audioDevice = std::static_pointer_cast<CSettingString>(setting);
     // Gotham and older didn't enumerate audio devices per stream on osx
@@ -2251,6 +2255,16 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
                   __FUNCTION__);
       }
     }
+    IAE *audioengine2;
+    audioengine2 = CServiceBroker::GetActiveAE(true);
+    if (audioengine2)
+    {
+      if (!audioengine2->Suspend())
+      {
+        CLog::Log(LOGINFO, "%s: Failed to suspend AudioEngine2 before launching external program",
+                  __FUNCTION__);
+      }
+    }
 #if defined(TARGET_DARWIN)
     CLog::Log(LOGINFO, "ExecWait is not implemented on this platform");
 #elif defined(TARGET_POSIX)
@@ -2264,6 +2278,13 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
       if (!audioengine->Resume())
       {
         CLog::Log(LOGFATAL, "%s: Failed to restart AudioEngine after return from external player", __FUNCTION__);
+      }
+    }
+    if (audioengine2)
+    {
+      if (!audioengine2->Resume())
+      {
+        CLog::Log(LOGFATAL, "%s: Failed to restart AudioEngine2 after return from external player", __FUNCTION__);
       }
     }
     break;
@@ -2749,6 +2770,8 @@ void CApplication::Stop(int exitCode)
     CServiceBroker::UnregisterAE();
     m_pActiveAE->Shutdown();
     m_pActiveAE.reset();
+    m_pActiveAE2->Shutdown();
+    m_pActiveAE2.reset();
 
     CLog::Log(LOGINFO, "Application stopped");
   }
@@ -4534,6 +4557,9 @@ void CApplication::Mute()
   IAE* ae = CServiceBroker::GetActiveAE();
   if (ae)
     ae->SetMute(true);
+  IAE* ae2 = CServiceBroker::GetActiveAE(true);
+  if (ae2)
+    ae2->SetMute(true);
   m_muted = true;
   VolumeChanged();
 }
@@ -4546,6 +4572,9 @@ void CApplication::UnMute()
   IAE* ae = CServiceBroker::GetActiveAE();
   if (ae)
     ae->SetMute(false);
+  IAE* ae2 = CServiceBroker::GetActiveAE(true);
+  if (ae2)
+    ae2->SetMute(false);
   m_muted = false;
   VolumeChanged();
 }
@@ -4569,6 +4598,9 @@ void CApplication::SetHardwareVolume(float hardwareVolume)
   IAE* ae = CServiceBroker::GetActiveAE();
   if (ae)
     ae->SetVolume(hardwareVolume);
+  IAE* ae2 = CServiceBroker::GetActiveAE(true);
+  if (ae2)
+    ae2->SetVolume(hardwareVolume);
 }
 
 float CApplication::GetVolumePercent() const

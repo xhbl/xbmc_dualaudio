@@ -23,6 +23,7 @@ CServiceBroker::CServiceBroker() :
     m_pGUI(nullptr),
     m_pWinSystem(nullptr),
     m_pActiveAE(nullptr),
+    m_pActiveAE2(nullptr),
     m_pSettingsComponent(nullptr),
     m_decoderFilterManager(nullptr)
 {
@@ -250,17 +251,19 @@ void CServiceBroker::UnregisterGUI()
 }
 
 // audio
-IAE* CServiceBroker::GetActiveAE()
+IAE* CServiceBroker::GetActiveAE(bool bAudio2)
 {
-  return g_serviceBroker.m_pActiveAE;
+  return !bAudio2 ? g_serviceBroker.m_pActiveAE : g_serviceBroker.m_pActiveAE2;
 }
-void CServiceBroker::RegisterAE(IAE *ae)
+void CServiceBroker::RegisterAE(IAE *ae, IAE *ae2)
 {
   g_serviceBroker.m_pActiveAE = ae;
+  g_serviceBroker.m_pActiveAE2 = ae2;
 }
 void CServiceBroker::UnregisterAE()
 {
   g_serviceBroker.m_pActiveAE = nullptr;
+  g_serviceBroker.m_pActiveAE2 = nullptr;
 }
 
 // application
