@@ -196,7 +196,7 @@ bool CDVDAudioCodecAndroidMediaCodec::Open(CDVDStreamInfo &hints, CDVDCodecOptio
 
   {
     //StereoDownmixAllowed is true if the user has selected 2.0 Audio channels in settings
-    bool stereoDownmixAllowed = CServiceBroker::GetActiveAE()->HasStereoAudioChannelCount();
+    bool stereoDownmixAllowed = CServiceBroker::GetActiveAE(m_bAudio2)->HasStereoAudioChannelCount();
     unsigned int num_codecs = CJNIMediaCodecList::getCodecCount();
     std::vector<std::string> mimeTypes;
 

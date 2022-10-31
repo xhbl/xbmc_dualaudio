@@ -46,7 +46,7 @@ public:
 
   static CDVDAudioCodec* CreateAudioCodec(CDVDStreamInfo &hint, CProcessInfo &processInfo,
                                           bool allowpassthrough, bool allowdtshddecode,
-                                          CAEStreamInfo::DataType ptStreamType);
+                                          CAEStreamInfo::DataType ptStreamType, bool bAudio2 = false);
 
   static CDVDOverlayCodec* CreateOverlayCodec(CDVDStreamInfo &hint);
 

@@ -18,7 +18,7 @@
 #include "utils/XTimeUtils.h"
 #include "utils/log.h"
 
-CAudioSinkAE::CAudioSinkAE(CDVDClock *clock) : m_pClock(clock)
+CAudioSinkAE::CAudioSinkAE(CDVDClock *clock, bool bAudio2) : m_pClock(clock)
 {
   m_pAudioStream = NULL;
   m_bPassthrough = false;
@@ -29,13 +29,14 @@ CAudioSinkAE::CAudioSinkAE(CDVDClock *clock) : m_pClock(clock)
   m_timeOfPts = 0.0; //silence coverity uninitialized warning, is set elsewhere
   m_syncError = 0.0;
   m_syncErrorTime = 0;
+  m_bAudio2 = bAudio2;
 }
 
 CAudioSinkAE::~CAudioSinkAE()
 {
   CSingleLock lock (m_critSection);
   if (m_pAudioStream)
-    CServiceBroker::GetActiveAE()->FreeStream(m_pAudioStream, true);
+    CServiceBroker::GetActiveAE(m_bAudio2)->FreeStream(m_pAudioStream, true);
 }
 
 bool CAudioSinkAE::Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool needresampler)
@@ -50,7 +51,7 @@ bool CAudioSinkAE::Create(const DVDAudioFrame &audioframe, AVCodecID codec, bool
   options |= AESTREAM_PAUSED;
 
   AEAudioFormat format = audioframe.format;
-  m_pAudioStream = CServiceBroker::GetActiveAE()->MakeStream(
+  m_pAudioStream = CServiceBroker::GetActiveAE(m_bAudio2)->MakeStream(
     format,
     options,
     this
@@ -73,7 +74,7 @@ void CAudioSinkAE::Destroy(bool finish)
   CSingleLock lock (m_critSection);
 
   if (m_pAudioStream)
-    CServiceBroker::GetActiveAE()->FreeStream(m_pAudioStream, finish);
+    CServiceBroker::GetActiveAE(m_bAudio2)->FreeStream(m_pAudioStream, finish);
 
   m_pAudioStream = NULL;
   m_sampleRate = 0;
@@ -369,12 +370,12 @@ CAEStreamInfo::DataType CAudioSinkAE::GetPassthroughStreamType(AVCodecID codecId
       format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_NULL;
   }
 
-  bool supports = CServiceBroker::GetActiveAE()->SupportsRaw(format);
+  bool supports = CServiceBroker::GetActiveAE(m_bAudio2)->SupportsRaw(format);
 
   if (!supports && codecId == AV_CODEC_ID_DTS)
   {
     format.m_streamInfo.m_type = CAEStreamInfo::STREAM_TYPE_DTSHD_CORE;
-    supports = CServiceBroker::GetActiveAE()->SupportsRaw(format);
+    supports = CServiceBroker::GetActiveAE(m_bAudio2)->SupportsRaw(format);
   }
 
   if (supports)

@@ -32,16 +32,21 @@
 class CDVDMsgAudioCodecChange : public CDVDMsg
 {
 public:
-  CDVDMsgAudioCodecChange(const CDVDStreamInfo &hints, CDVDAudioCodec* codec)
+  CDVDMsgAudioCodecChange(const CDVDStreamInfo &hints, CDVDAudioCodec* codec, CDVDAudioCodec* codec2)
     : CDVDMsg(GENERAL_STREAMCHANGE)
     , m_codec(codec)
+    , m_codec2(codec2)
     , m_hints(hints)
   {}
  ~CDVDMsgAudioCodecChange() override
   {
-    delete m_codec;
+    if (m_codec)
+      delete m_codec;
+    if (m_codec2)
+      delete m_codec2;
   }
   CDVDAudioCodec* m_codec;
+  CDVDAudioCodec* m_codec2;
   CDVDStreamInfo  m_hints;
 };
 
@@ -51,9 +56,13 @@ CVideoPlayerAudio::CVideoPlayerAudio(CDVDClock* pClock, CDVDMessageQueue& parent
 , m_messageQueue("audio")
 , m_messageParent(parent)
 , m_audioSink(pClock)
+, m_audioSink2(pClock, true)
 {
   m_pClock = pClock;
   m_pAudioCodec = NULL;
+  m_pAudioCodec2 = NULL;
+  m_bAudio2 = false;
+  m_bAudio2Skip = false;
   m_audioClock = 0;
   m_speed = DVD_PLAYSPEED_NORMAL;
   m_stalled = true;
@@ -78,6 +87,8 @@ CVideoPlayerAudio::~CVideoPlayerAudio()
 
 bool CVideoPlayerAudio::OpenStream(CDVDStreamInfo hints)
 {
+  m_bAudio2 = CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_AUDIOOUTPUT2_ENABLED) ? true : false;
+
   CLog::Log(LOGINFO, "Finding audio codec for: %i", hints.codec);
   bool allowpassthrough = !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
   if (m_processInfo.IsRealtimeStream())
@@ -93,12 +104,27 @@ bool CVideoPlayerAudio::OpenStream(CDVDStreamInfo hints)
     CLog::Log(LOGERROR, "Unsupported audio codec");
     return false;
   }
+  CDVDAudioCodec* codec2 = NULL;
+  if (m_bAudio2)
+  {
+    CAEStreamInfo::DataType streamType2 =
+        m_audioSink2.GetPassthroughStreamType(hints.codec, hints.samplerate, hints.profile);
+    codec2 = CDVDFactoryCodec::CreateAudioCodec(hints, m_processInfo,
+                                                allowpassthrough, m_processInfo.AllowDTSHDDecode(),
+                                                streamType2, m_bAudio2);
+    if( !codec2 )
+    {
+      CLog::Log(LOGERROR, "Unsupported 2nd audio codec");
+      m_audioSink2.Destroy(true);
+      m_bAudio2 = false;
+    }
+  }
 
   if(m_messageQueue.IsInited())
-    m_messageQueue.Put(new CDVDMsgAudioCodecChange(hints, codec), 0);
+    m_messageQueue.Put(new CDVDMsgAudioCodecChange(hints, codec, codec2), 0);
   else
   {
-    OpenStream(hints, codec);
+    OpenStream(hints, codec, codec2);
     m_messageQueue.Init();
     CLog::Log(LOGINFO, "Creating audio thread");
     Create();
@@ -106,10 +132,15 @@ bool CVideoPlayerAudio::OpenStream(CDVDStreamInfo hints)
   return true;
 }
 
-void CVideoPlayerAudio::OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec)
+void CVideoPlayerAudio::OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec, CDVDAudioCodec* codec2)
 {
-  SAFE_DELETE(m_pAudioCodec);
+  if (m_pAudioCodec)
+    SAFE_DELETE(m_pAudioCodec);
   m_pAudioCodec = codec;
+
+  if (m_pAudioCodec2)
+    SAFE_DELETE(m_pAudioCodec2);
+  m_pAudioCodec2 = codec2;
 
   m_processInfo.ResetAudioCodecInfo();
 
@@ -170,14 +201,20 @@ void CVideoPlayerAudio::CloseStream(bool bWaitForBuffers)
   {
     m_bStop = false;
     m_audioSink.Drain();
+    if (m_bAudio2)
+      m_audioSink2.Drain();
     m_bStop = true;
   }
   else
   {
     m_audioSink.Flush();
+    if (m_bAudio2)
+      m_audioSink2.Flush();
   }
 
   m_audioSink.Destroy(true);
+  if (m_bAudio2)
+    m_audioSink2.Destroy(true);
 
   // uninit queue
   m_messageQueue.End();
@@ -189,6 +226,14 @@ void CVideoPlayerAudio::CloseStream(bool bWaitForBuffers)
     delete m_pAudioCodec;
     m_pAudioCodec = NULL;
   }
+  if (m_pAudioCodec2)
+  {
+    m_pAudioCodec2->Dispose();
+    delete m_pAudioCodec2;
+    m_pAudioCodec2 = NULL;
+  }
+
+  m_bAudio2 = false;
 }
 
 void CVideoPlayerAudio::OnStartup()
@@ -206,10 +251,13 @@ void CVideoPlayerAudio::UpdatePlayerInfo()
   if (m_synctype == SYNC_RESAMPLE)
     s << ", rr:" << std::fixed << std::setprecision(5) << 1.0 / m_audioSink.GetResampleRatio();
 
+  if (m_bAudio2)
+    s << ", a1/a2:" << std::fixed << std::setprecision(3) << m_audiodiff;
+
   SInfo info;
   info.info        = s.str();
   info.pts         = m_audioSink.GetPlayingPts();
-  info.passthrough = m_pAudioCodec && m_pAudioCodec->NeedPassthrough();
+  info.passthrough = m_pAudioCodec && m_pAudioCodec->NeedPassthrough() && (!m_bAudio2 || (m_pAudioCodec2 && m_pAudioCodec2->NeedPassthrough()));
 
   { CSingleLock lock(m_info_section);
     m_info = info;
@@ -223,7 +271,12 @@ void CVideoPlayerAudio::Process()
   DVDAudioFrame audioframe;
   audioframe.nb_frames = 0;
   audioframe.framesOut = 0;
+  DVDAudioFrame audioframe2;
+  audioframe2.nb_frames = 0;
+  audioframe2.framesOut = 0;
   m_audioStats.Start();
+  m_audiodiff = 0.0;
+  m_bAudio2Skip = false;
 
   bool onlyPrioMsgs = false;
 
@@ -264,7 +317,7 @@ void CVideoPlayerAudio::Process()
     }
     else if (ret == MSGQ_TIMEOUT)
     {
-      if (ProcessDecoderOutput(audioframe))
+      if (ProcessDecoderOutput(audioframe, audioframe2))
       {
         onlyPrioMsgs = true;
         continue;
@@ -308,10 +361,16 @@ void CVideoPlayerAudio::Process()
       if (pts > m_audioClock - delay + 0.5 * DVD_TIME_BASE)
       {
         m_audioSink.Flush();
+        if (m_bAudio2)
+          m_audioSink2.Flush();
       }
       m_audioClock = pts + delay;
       if (m_speed != DVD_PLAYSPEED_PAUSE)
+      {
         m_audioSink.Resume();
+        if (m_bAudio2)
+          m_audioSink2.Resume();
+      }
       m_syncState = IDVDStreamPlayer::SYNC_INSYNC;
       m_syncTimer.Set(3000);
     }
@@ -319,28 +378,40 @@ void CVideoPlayerAudio::Process()
     {
       if (m_pAudioCodec)
         m_pAudioCodec->Reset();
+      if (m_pAudioCodec2)
+        m_pAudioCodec2->Reset();
       m_audioSink.Flush();
+      if (m_bAudio2)
+        m_audioSink2.Flush();
       m_stalled = true;
       m_audioClock = 0;
       audioframe.nb_frames = 0;
+      audioframe2.nb_frames = 0;
       m_syncState = IDVDStreamPlayer::SYNC_STARTING;
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_FLUSH))
     {
       bool sync = static_cast<CDVDMsgBool*>(pMsg)->m_value;
       m_audioSink.Flush();
+      if (m_bAudio2)
+        m_audioSink2.Flush();
       m_stalled = true;
       m_audioClock = 0;
       audioframe.nb_frames = 0;
+      audioframe2.nb_frames = 0;
 
       if (sync)
       {
         m_syncState = IDVDStreamPlayer::SYNC_STARTING;
         m_audioSink.Pause();
+        if (m_bAudio2)
+          m_audioSink2.Pause();
       }
 
       if (m_pAudioCodec)
         m_pAudioCodec->Reset();
+      if (m_pAudioCodec2)
+        m_pAudioCodec2->Reset();
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_EOF))
     {
@@ -357,6 +428,8 @@ void CVideoPlayerAudio::Process()
           if (m_syncState == IDVDStreamPlayer::SYNC_INSYNC)
           {
             m_audioSink.Resume();
+            if (m_bAudio2)
+              m_audioSink2.Resume();
             m_stalled = false;
           }
         }
@@ -364,14 +437,17 @@ void CVideoPlayerAudio::Process()
       else
       {
         m_audioSink.Pause();
+        if (m_bAudio2)
+          m_audioSink2.Pause();
       }
       m_speed = (int)speed;
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_STREAMCHANGE))
     {
       CDVDMsgAudioCodecChange* msg(static_cast<CDVDMsgAudioCodecChange*>(pMsg));
-      OpenStream(msg->m_hints, msg->m_codec);
+      OpenStream(msg->m_hints, msg->m_codec, msg->m_codec2);
       msg->m_codec = NULL;
+      msg->m_codec2 = NULL;
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_PAUSE))
     {
@@ -398,6 +474,12 @@ void CVideoPlayerAudio::Process()
           m_audioSink.Drain();
           m_audioSink.Flush();
           audioframe.nb_frames = 0;
+          if (m_bAudio2)
+          {
+            m_audioSink2.Drain();
+            m_audioSink2.Flush();
+            audioframe2.nb_frames = 0;
+          }
         }
         m_syncState = IDVDStreamPlayer::SYNC_STARTING;
         continue;
@@ -418,10 +500,13 @@ void CVideoPlayerAudio::Process()
         continue;
       }
 
+      if (m_bAudio2)
+        m_pAudioCodec2->AddData(*pPacket);
+
       m_audioStats.AddSampleBytes(pPacket->iSize);
       UpdatePlayerInfo();
 
-      if (ProcessDecoderOutput(audioframe))
+      if (ProcessDecoderOutput(audioframe, audioframe2))
       {
         onlyPrioMsgs = true;
       }
@@ -435,7 +520,7 @@ void CVideoPlayerAudio::Process()
   }
 }
 
-bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
+bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe, DVDAudioFrame &audioframe2)
 {
   if (audioframe.nb_frames <= audioframe.framesOut)
   {
@@ -445,6 +530,8 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
 
     if (audioframe.nb_frames == 0)
     {
+      if(m_bAudio2)
+        return ProcessDecoderOutput2(audioframe2);
       return false;
     }
 
@@ -547,6 +634,9 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
 
   audioframe.framesOut += framesOutput;
 
+  if(m_bAudio2)
+    ProcessDecoderOutput2(audioframe2);
+
   // signal to our parent that we have initialized
   if (m_syncState == IDVDStreamPlayer::SYNC_STARTING)
   {
@@ -568,9 +658,89 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
       m_processInfo.SetAudioSampleRate(audioframe.format.m_sampleRate);
       m_processInfo.SetAudioBitsPerSample(audioframe.bits_per_sample);
       m_processInfo.SetAudioDecoderName(m_pAudioCodec->GetName());
+      if(m_bAudio2)
+      {
+        m_processInfo.SetAudioChannels(audioframe2.format.m_channelLayout, true);
+        m_processInfo.SetAudioSampleRate(audioframe2.format.m_sampleRate, true);
+        m_processInfo.SetAudioBitsPerSample(audioframe2.bits_per_sample, true);
+        m_processInfo.SetAudioDecoderName(m_pAudioCodec2->GetName(), true);
+      }
       m_messageParent.Put(new CDVDMsg(CDVDMsg::PLAYER_AVCHANGE));
     }
   }
+
+  return true;
+}
+
+bool CVideoPlayerAudio::ProcessDecoderOutput2(DVDAudioFrame &audioframe2)
+{
+  if (audioframe2.nb_frames <= audioframe2.framesOut)
+  {
+    audioframe2.hasDownmix = false;
+
+    m_pAudioCodec2->GetData(audioframe2);
+
+    if (audioframe2.nb_frames == 0)
+    {
+      return false;
+    }
+
+    audioframe2.hasTimestamp = true;
+    if (audioframe2.pts == DVD_NOPTS_VALUE)
+    {
+      audioframe2.pts = m_audioClock;
+      audioframe2.hasTimestamp = false;
+    }
+
+    // demuxer reads metatags that influence channel layout
+    if (m_streaminfo.codec == AV_CODEC_ID_FLAC && m_streaminfo.channellayout)
+      audioframe2.format.m_channelLayout = CAEUtil::GetAEChannelLayout(m_streaminfo.channellayout);
+
+    // we have successfully decoded an audio frame, setup renderer to match
+    if (!m_audioSink2.IsValidFormat(audioframe2))
+    {
+      if (m_speed)
+        m_audioSink2.Drain();
+
+      m_audioSink2.Destroy(false);
+
+      if (!m_audioSink2.Create(audioframe2, m_streaminfo.codec, m_synctype == SYNC_RESAMPLE))
+        CLog::Log(LOGERROR, "%s - failed to create 2nd audio renderer", __FUNCTION__);
+
+      if (m_syncState == IDVDStreamPlayer::SYNC_INSYNC)
+        m_audioSink2.Resume();
+    }
+
+    // Apply VolumeAmplification from settings on playback
+    m_audioSink2.SetDynamicRangeCompression(
+        static_cast<long>(m_processInfo.GetVideoSettings().m_VolumeAmplification * 100));
+
+    // downmix
+    double clev = audioframe2.hasDownmix ? audioframe2.centerMixLevel : M_SQRT1_2;
+    double curDB = 20 * log10(clev);
+    audioframe2.centerMixLevel = pow(10, (curDB + m_processInfo.GetVideoSettings().m_CenterMixLevel) / 20);
+    audioframe2.hasDownmix = true;
+  }
+
+  bool bAudio2Dumb = CServiceBroker::GetActiveAE(true)->IsDumb();
+  bool bAudio2Disabled = CServiceBroker::GetActiveAE(true)->IsDisabled();
+
+  if(!bAudio2Disabled && !bAudio2Dumb && !m_bAudio2Skip && audioframe2.nb_frames > 0)
+  {
+    int framesOutput = m_audioSink2.AddPackets(audioframe2);
+    audioframe2.framesOut += framesOutput;
+	if(framesOutput == 0) audioframe2.framesOut = audioframe2.nb_frames;
+  }
+  else
+    audioframe2.framesOut = audioframe2.nb_frames;
+
+  if(bAudio2Disabled || bAudio2Dumb)
+  {
+    m_audiodiff = 0.0;
+  	return false;
+  }
+  else
+    HandleSyncAudio2(audioframe2);
 
   return true;
 }
@@ -600,6 +770,39 @@ void CVideoPlayerAudio::SetSyncType(bool passthrough)
   }
 }
 
+void CVideoPlayerAudio::HandleSyncAudio2(DVDAudioFrame &audioframe2)
+{
+  if(audioframe2.nb_frames == 0 || audioframe2.planes == 0)
+    return;
+
+  double threshold = 50000.0;
+  threshold = threshold > audioframe2.duration ? threshold : audioframe2.duration;
+
+  double dtm1 = m_audioSink.GetDelay();
+  double dtm2 = m_audioSink2.GetDelay();
+  double ddiff = (dtm1 - dtm2);
+
+  m_audiodiff = ddiff / DVD_TIME_BASE;
+
+  if (ddiff > threshold)
+  {
+    int framesize = audioframe2.passthrough ? 1 : audioframe2.framesize;
+    int size2 = audioframe2.nb_frames * framesize / audioframe2.planes;
+    for (unsigned int i=0; i<audioframe2.planes; i++)
+      memset(audioframe2.data[i], 0, size2);
+    m_audioSink2.AddPackets(audioframe2);
+  }
+
+  if (ddiff < -threshold)
+  {
+    m_bAudio2Skip = true;
+  }
+  else if (m_bAudio2Skip && ddiff > 0.0)
+  {
+    m_bAudio2Skip = false;
+  }
+}
+
 void CVideoPlayerAudio::OnExit()
 {
 #ifdef TARGET_WINDOWS
@@ -623,6 +826,8 @@ void CVideoPlayerAudio::Flush(bool sync)
   m_messageQueue.Put( new CDVDMsgBool(CDVDMsg::GENERAL_FLUSH, sync), 1);
 
   m_audioSink.AbortAddPackets();
+  if(m_bAudio2)
+    m_audioSink2.AbortAddPackets();
 }
 
 bool CVideoPlayerAudio::AcceptsData() const
@@ -640,6 +845,7 @@ bool CVideoPlayerAudio::SwitchCodecIfNeeded()
 
   m_displayReset = false;
 
+  bool bSwitched = false;
   bool allowpassthrough = !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
   if (m_processInfo.IsRealtimeStream() || m_synctype == SYNC_RESAMPLE)
     allowpassthrough = false;
@@ -654,13 +860,33 @@ bool CVideoPlayerAudio::SwitchCodecIfNeeded()
   {
     // passthrough state has not changed
     delete codec;
-    return false;
+    bSwitched = false;
+  } else {
+    delete m_pAudioCodec;
+    m_pAudioCodec = codec;
+    bSwitched = true;
   }
 
-  delete m_pAudioCodec;
-  m_pAudioCodec = codec;
+  if (m_bAudio2)
+  {
+    CAEStreamInfo::DataType streamType2 = m_audioSink2.GetPassthroughStreamType(
+        m_streaminfo.codec, m_streaminfo.samplerate, m_streaminfo.profile);
+    CDVDAudioCodec *codec2 = CDVDFactoryCodec::CreateAudioCodec(m_streaminfo, m_processInfo,
+                                                                allowpassthrough, m_processInfo.AllowDTSHDDecode(),
+                                                                streamType2, true);
+    if (codec2 != NULL)
+    {
+      if (!codec2 || codec2->NeedPassthrough() == m_pAudioCodec2->NeedPassthrough()) {
+        // passthrough state has not changed
+        delete codec2;
+      } else {
+        delete m_pAudioCodec2;
+        m_pAudioCodec2 = codec2;
+      }
+    }
+  }
 
-  return true;
+  return bSwitched;
 }
 
 std::string CVideoPlayerAudio::GetPlayerInfo()

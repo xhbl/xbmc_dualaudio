@@ -165,7 +165,7 @@ void CDVDFactoryCodec::ClearHWAccels()
 
 CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProcessInfo &processInfo,
                                                    bool allowpassthrough, bool allowdtshddecode,
-                                                   CAEStreamInfo::DataType ptStreamType)
+                                                   CAEStreamInfo::DataType ptStreamType, bool bAudio2)
 {
   std::unique_ptr<CDVDAudioCodec> pCodec;
   CDVDCodecOptions options;
@@ -180,6 +180,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProces
   for (auto &codec : m_hwAudioCodecs)
   {
     pCodec.reset(CreateAudioCodecHW(codec.first, processInfo));
+    if (pCodec) pCodec->SetAudio2(bAudio2);
     if (pCodec && pCodec->Open(hint, options))
     {
       return pCodec.release();
@@ -190,6 +191,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProces
   if (allowpassthrough && ptStreamType != CAEStreamInfo::STREAM_TYPE_NULL)
   {
     pCodec.reset(new CDVDAudioCodecPassthrough(processInfo, ptStreamType));
+    if (pCodec) pCodec->SetAudio2(bAudio2);
     if (pCodec->Open(hint, options))
     {
       return pCodec.release();
@@ -197,6 +199,7 @@ CDVDAudioCodec* CDVDFactoryCodec::CreateAudioCodec(CDVDStreamInfo &hint, CProces
   }
 
   pCodec.reset(new CDVDAudioCodecFFmpeg(processInfo));
+  if (pCodec) pCodec->SetAudio2(bAudio2);
   if (pCodec->Open(hint, options))
   {
     return pCodec.release();
