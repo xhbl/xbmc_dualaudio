@@ -190,57 +190,117 @@ float CDataCacheCore::GetVideoDAR()
 }
 
 // player audio info
-void CDataCacheCore::SetAudioDecoderName(std::string name)
+void CDataCacheCore::SetAudioDecoderName(std::string name, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+
+    m_playerAudio2Info.decoderName = name;
+    return;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   m_playerAudioInfo.decoderName = std::move(name);
 }
 
-std::string CDataCacheCore::GetAudioDecoderName()
+std::string CDataCacheCore::GetAudioDecoderName(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+		
+    return m_playerAudio2Info.decoderName;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   return m_playerAudioInfo.decoderName;
 }
 
-void CDataCacheCore::SetAudioChannels(std::string channels)
+void CDataCacheCore::SetAudioChannels(std::string channels, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+	
+    m_playerAudio2Info.channels = channels;
+    return;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   m_playerAudioInfo.channels = std::move(channels);
 }
 
-std::string CDataCacheCore::GetAudioChannels()
+std::string CDataCacheCore::GetAudioChannels(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+		
+    return m_playerAudio2Info.channels;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   return m_playerAudioInfo.channels;
 }
 
-void CDataCacheCore::SetAudioSampleRate(int sampleRate)
+void CDataCacheCore::SetAudioSampleRate(int sampleRate, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+	
+    m_playerAudio2Info.sampleRate = sampleRate;
+    return;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   m_playerAudioInfo.sampleRate = sampleRate;
 }
 
-int CDataCacheCore::GetAudioSampleRate()
+int CDataCacheCore::GetAudioSampleRate(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+		
+    return m_playerAudio2Info.sampleRate;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   return m_playerAudioInfo.sampleRate;
 }
 
-void CDataCacheCore::SetAudioBitsPerSample(int bitsPerSample)
+void CDataCacheCore::SetAudioBitsPerSample(int bitsPerSample, bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+	
+    m_playerAudio2Info.bitsPerSample = bitsPerSample;
+    return;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   m_playerAudioInfo.bitsPerSample = bitsPerSample;
 }
 
-int CDataCacheCore::GetAudioBitsPerSample()
+int CDataCacheCore::GetAudioBitsPerSample(bool bAudio2)
 {
+  if (bAudio2)
+  {
+    CSingleLock lock(m_audio2PlayerSection);
+	  
+    return m_playerAudio2Info.bitsPerSample;
+  }
+
   CSingleLock lock(m_audioPlayerSection);
 
   return m_playerAudioInfo.bitsPerSample;
