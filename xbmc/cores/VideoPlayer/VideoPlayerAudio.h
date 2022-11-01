@@ -71,8 +71,6 @@ protected:
   bool SwitchCodecIfNeeded();
   void SetSyncType(bool passthrough);
 
-  void HandleSyncAudio2(DVDAudioFrame &audioframe2);
-
   CDVDMessageQueue m_messageQueue;
   CDVDMessageQueue& m_messageParent;
 
@@ -113,7 +111,6 @@ protected:
   bool m_displayReset = false;
 
   bool   m_bAudio2;
-  bool   m_bAudio2Skip;
   double m_audiodiff;
 };
 

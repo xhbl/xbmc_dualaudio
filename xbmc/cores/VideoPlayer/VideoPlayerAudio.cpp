@@ -62,7 +62,6 @@ CVideoPlayerAudio::CVideoPlayerAudio(CDVDClock* pClock, CDVDMessageQueue& parent
   m_pAudioCodec = NULL;
   m_pAudioCodec2 = NULL;
   m_bAudio2 = false;
-  m_bAudio2Skip = false;
   m_audioClock = 0;
   m_speed = DVD_PLAYSPEED_NORMAL;
   m_stalled = true;
@@ -276,7 +275,6 @@ void CVideoPlayerAudio::Process()
   audioframe2.framesOut = 0;
   m_audioStats.Start();
   m_audiodiff = 0.0;
-  m_bAudio2Skip = false;
 
   bool onlyPrioMsgs = false;
 
@@ -725,7 +723,7 @@ bool CVideoPlayerAudio::ProcessDecoderOutput2(DVDAudioFrame &audioframe2)
   bool bAudio2Dumb = CServiceBroker::GetActiveAE(true)->IsDumb();
   bool bAudio2Disabled = CServiceBroker::GetActiveAE(true)->IsDisabled();
 
-  if(!bAudio2Disabled && !bAudio2Dumb && !m_bAudio2Skip && audioframe2.nb_frames > 0)
+  if(!bAudio2Disabled && !bAudio2Dumb && audioframe2.nb_frames > 0)
   {
     int framesOutput = m_audioSink2.AddPackets(audioframe2);
     audioframe2.framesOut += framesOutput;
@@ -739,8 +737,8 @@ bool CVideoPlayerAudio::ProcessDecoderOutput2(DVDAudioFrame &audioframe2)
     m_audiodiff = 0.0;
   	return false;
   }
-  else
-    HandleSyncAudio2(audioframe2);
+
+  m_audiodiff = (m_audioSink.GetDelay() - m_audioSink2.GetDelay()) / DVD_TIME_BASE;
 
   return true;
 }
@@ -767,39 +765,6 @@ void CVideoPlayerAudio::SetSyncType(bool passthrough)
       m_audioSink.SetResampleMode(1);
     else
       m_audioSink.SetResampleMode(0);
-  }
-}
-
-void CVideoPlayerAudio::HandleSyncAudio2(DVDAudioFrame &audioframe2)
-{
-  if(audioframe2.nb_frames == 0 || audioframe2.planes == 0)
-    return;
-
-  double threshold = 50000.0;
-  threshold = threshold > audioframe2.duration ? threshold : audioframe2.duration;
-
-  double dtm1 = m_audioSink.GetDelay();
-  double dtm2 = m_audioSink2.GetDelay();
-  double ddiff = (dtm1 - dtm2);
-
-  m_audiodiff = ddiff / DVD_TIME_BASE;
-
-  if (ddiff > threshold)
-  {
-    int framesize = audioframe2.passthrough ? 1 : audioframe2.framesize;
-    int size2 = audioframe2.nb_frames * framesize / audioframe2.planes;
-    for (unsigned int i=0; i<audioframe2.planes; i++)
-      memset(audioframe2.data[i], 0, size2);
-    m_audioSink2.AddPackets(audioframe2);
-  }
-
-  if (ddiff < -threshold)
-  {
-    m_bAudio2Skip = true;
-  }
-  else if (m_bAudio2Skip && ddiff > 0.0)
-  {
-    m_bAudio2Skip = false;
   }
 }
 
