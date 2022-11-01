@@ -55,9 +55,6 @@ PAPlayer::PAPlayer(IPlayerCallback& callback) :
   m_processInfo.reset(CProcessInfo::CreateInstance());
   m_processInfo->SetDataCache(&CServiceBroker::GetDataCacheCore());
   m_bAudio2 = false;
-  m_iTimeSynced = 0;
-  m_iAudio2Discard = 0;
-  m_iRawFrameSize = 0;
 }
 
 PAPlayer::~PAPlayer()
@@ -728,8 +725,6 @@ void PAPlayer::Process()
     }
 
     GetTimeInternal(); //update for GUI
-
-    SyncStreams2();
   }
   m_isPlaying = false;
 }
@@ -946,6 +941,8 @@ inline bool PAPlayer::ProcessStream(StreamInfo *si, double &freeBufferTime)
     si->m_decoder.Seek(time);
     if(si->m_usedecoder2)
       si->m_decoder2.Seek(time);
+
+    SyncStreams2();
   }
 
   int status = si->m_decoder.GetStatus();
@@ -992,6 +989,8 @@ inline bool PAPlayer::ProcessStream(StreamInfo *si, double &freeBufferTime)
         m_callback.OnPlayBackStarted(si->m_fileItem);
       m_signalStarted = true;
       m_callback.OnAVStarted(si->m_fileItem);
+
+      SyncStreams2();
     }
     else
     {
@@ -1048,7 +1047,8 @@ inline bool PAPlayer::ProcessStream(StreamInfo *si, double &freeBufferTime)
 
 bool PAPlayer::QueueData(StreamInfo *si)
 {
-  bool bAudio2 = m_bAudio2 && !si->m_usedecoder2 && si->m_stream2 && !CServiceBroker::GetActiveAE(true)->IsDisabled();
+  bool bAudio2 = m_bAudio2 && !si->m_usedecoder2 && si->m_stream2;
+  bool bAudio2Disabled = CServiceBroker::GetActiveAE(true)->IsDisabled();
   unsigned int space = si->m_stream->GetSpace();
   if (bAudio2)
   {
@@ -1079,28 +1079,13 @@ bool PAPlayer::QueueData(StreamInfo *si)
 
     if (bAudio2)
     {
-      if(samples > m_iAudio2Discard)
-      {
-        m_iAudio2Discard = 0;
-        samples -= m_iAudio2Discard;
-      }
-      else
-      {
-        m_iAudio2Discard -= samples;
-        samples = samples - (samples * si->m_bytesPerSample / si->m_bytesPerFrame * si->m_bytesPerFrame / si->m_bytesPerSample);
-      }
-      if(samples)
-      {
-        frames = samples/si->m_audioFormat.m_channelLayout.Count();
-        added = si->m_stream2->AddData(&data, 0, frames, 0);
-      }
-      si->m_framesSent2 = si->m_framesSent;
+      if(!bAudio2Disabled)
+	    added = si->m_stream2->AddData(&data, 0, frames, 0);
+	  si->m_framesSent2 = si->m_framesSent;
     }
   }
   else
   {
-    m_iRawFrameSize = 0;
-
     if (!space)
       return true;
 
@@ -1119,10 +1104,7 @@ bool PAPlayer::QueueData(StreamInfo *si)
 
       if (bAudio2)
       {
-        m_iRawFrameSize = size;
-        if (m_iAudio2Discard)
-          m_iAudio2Discard--;
-        else
+        if(!bAudio2Disabled)
           added = si->m_stream2->AddData(&data, 0, size, nullptr);
         si->m_framesSent2 = si->m_framesSent;
       }
@@ -1140,7 +1122,7 @@ bool PAPlayer::QueueData2(StreamInfo *si)
   if (!si->m_usedecoder2)
     return false;
 
-  bool bAudio2 = !CServiceBroker::GetActiveAE(true)->IsDisabled();
+  bool bAudio2Disabled = CServiceBroker::GetActiveAE(true)->IsDisabled();
   unsigned int space   = si->m_stream2->GetSpace();
 
   if (si->m_audioFormat2.m_dataFormat != AE_FMT_RAW)
@@ -1159,29 +1141,12 @@ bool PAPlayer::QueueData2(StreamInfo *si)
       return false;
     }
 
-	if(samples > m_iAudio2Discard)
-    {
-      si->m_framesSent2 += m_iAudio2Discard/si->m_audioFormat2.m_channelLayout.Count();
-      m_iAudio2Discard = 0;
-      samples -= m_iAudio2Discard;
-    }
-    else
-    {
-      si->m_framesSent2 += samples/si->m_audioFormat2.m_channelLayout.Count();
-      m_iAudio2Discard -= samples;
-      samples = samples - (samples * si->m_bytesPerSample2 / si->m_bytesPerFrame2 * si->m_bytesPerFrame2 / si->m_bytesPerSample2);
-    }
-    if(bAudio2 && samples)
-    {
-      unsigned int frames = samples/si->m_audioFormat2.m_channelLayout.Count();
-      unsigned int added = si->m_stream2->AddData(&data, 0, frames, nullptr);
-      si->m_framesSent2 += added;
-    }
+    unsigned int frames = samples/si->m_audioFormat2.m_channelLayout.Count();
+    unsigned int added = bAudio2Disabled ? frames : si->m_stream2->AddData(&data, 0, frames, nullptr);
+    si->m_framesSent2 += added;
   }
   else
   {
-    m_iRawFrameSize = 0;
-	  
     if (!space)
       return true;
 
@@ -1189,10 +1154,7 @@ bool PAPlayer::QueueData2(StreamInfo *si)
     uint8_t *data = si->m_decoder2.GetRawData(size);
     if (data && size)
     {
-      m_iRawFrameSize = size;
-      if (m_iAudio2Discard)
-        m_iAudio2Discard--;
-      else if (bAudio2)
+      if (!bAudio2Disabled)
       {
         int added = si->m_stream2->AddData(&data, 0, size, nullptr);
         if (added != size)
@@ -1214,78 +1176,24 @@ inline void PAPlayer::SyncStreams2()
   if(!m_bAudio2)
     return;
 
-  if(CServiceBroker::GetActiveAE(true)->IsDisabled() ||
-     CServiceBroker::GetActiveAE(true)->IsDumb() || CServiceBroker::GetActiveAE()->IsDumb())
+  if(CServiceBroker::GetActiveAE(true)->IsDisabled())
     return;
 
   if(!m_currentStream || !m_currentStream->m_stream || !m_currentStream->m_stream2)
     return;
 
-  if(m_currentStream->m_usedecoder2)
-    return;
-
   if(m_playbackSpeed != 1)
     return;
 
-  int iTimeSynced = (int)((double)clock()/CLOCKS_PER_SEC*1000);
-  if(iTimeSynced - m_iTimeSynced < 50)
-    return;
-  m_iTimeSynced = iTimeSynced;
-
   double time1 = ((double)m_currentStream->m_framesSent / (double)m_currentStream->m_audioFormat.m_sampleRate);
   double time2 = ((double)m_currentStream->m_framesSent2 / (double)m_currentStream->m_audioFormat2.m_sampleRate);
-  time1 -= m_currentStream->m_stream->GetDelay();
-  time2 -= m_currentStream->m_stream2->GetDelay();
-  double timediff = time2 - time1;
+  double timediff = (time2 - m_currentStream->m_stream2->GetDelay()) - (time1 - m_currentStream->m_stream->GetDelay());
 
-  m_iAudio2Discard = 0;
-  if (timediff > 0.05)
+  if (timediff > 0.05 || timediff < -0.05)
   {
-    if (m_currentStream->m_audioFormat2.m_dataFormat != AE_FMT_RAW)
-    {
-      unsigned int padsize = (unsigned int)(timediff * (double)m_currentStream->m_audioFormat2.m_sampleRate) * m_currentStream->m_bytesPerFrame2;
-      if(padsize > m_currentStream->m_stream2->GetSpace())
-        padsize = (m_currentStream->m_stream2->GetSpace() / m_currentStream->m_bytesPerFrame2) * m_currentStream->m_bytesPerFrame2;
-      if(padsize)
-      {
-        uint8_t* padbuf = (uint8_t*)malloc(padsize);
-        if(padbuf)
-        {
-          memset(padbuf, 0, padsize);
-          m_currentStream->m_stream2->AddData(&padbuf, 0, padsize/m_currentStream->m_bytesPerFrame2, 0);
-          free(padbuf);
-        }
-      }
-    }
-    else
-    {
-      unsigned int padfrms = (unsigned int)(timediff * 1000.0 / m_currentStream->m_audioFormat2.m_streamInfo.GetDuration());
-      if(padfrms > m_currentStream->m_stream2->GetSpace())
-        padfrms = m_currentStream->m_stream2->GetSpace();
-	  unsigned int padsize = padfrms * m_iRawFrameSize;
-      if(padsize)
-      {
-        uint8_t* padbuf = (uint8_t*)malloc(padsize);
-        if(padbuf)
-        {
-          memset(padbuf, 0, padsize);
-          m_currentStream->m_stream2->AddData(&padbuf, 0, padsize, 0);
-          free(padbuf);
-        }
-      }
-    }
-  }
-  else if(timediff < -0.05)
-  {
-    if (m_currentStream->m_audioFormat2.m_dataFormat != AE_FMT_RAW)
-    {
-      unsigned int discardsize = (unsigned int)(-timediff * (double)m_currentStream->m_audioFormat2.m_sampleRate) * m_currentStream->m_bytesPerFrame2;
-      m_iAudio2Discard = discardsize / m_currentStream->m_bytesPerSample2;
-    }
-    else
-    {
-      m_iAudio2Discard = (unsigned int)(-timediff * 1000.0 / m_currentStream->m_audioFormat2.m_streamInfo.GetDuration());
-    }
+    m_currentStream->m_stream->Flush();
+    m_currentStream->m_stream2->Flush();
+	m_currentStream->m_framesSent2 = (int)(time1 * m_currentStream->m_audioFormat2.m_sampleRate);
   }
 }
 

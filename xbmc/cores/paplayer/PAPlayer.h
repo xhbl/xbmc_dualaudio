@@ -142,9 +142,6 @@ private:
   int64_t             m_newForcedPlayerTime;
   int64_t             m_newForcedTotalTime;
   bool                m_bAudio2;
-  int                 m_iTimeSynced;
-  unsigned int        m_iAudio2Discard;
-  unsigned int        m_iRawFrameSize;
   std::unique_ptr<CProcessInfo> m_processInfo;
 
   bool QueueNextFileEx(const CFileItem &file, bool fadeIn);
