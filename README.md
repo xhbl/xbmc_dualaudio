@@ -1,3 +1,16 @@
+<h1 align="center">
+  About the Kodi Dual Audio Project
+</h1>
+
+Kodi Dual Audio feature provides two simultaneous audio outputs for built-in audio and video player as well as GUI sound. Two outputs can be configured independently through GUI settings.
+
+Previously the feature was developed in Dharma and Eden and distributed as a patch in Kodi forum. As the new Audio subsystem known as AudioEngine was introduced since Frodo to replace the old Audio Renderer, the old patch was not applicable. This project is to develop a new dual audio support for Kodi Frodo and subsequent versions which is adapted to the AudioEngine.
+
+For discussion and downloading, please refer to the **[forum thread](http://forum.kodi.tv/showthread.php?tid=192480)** about this project. Please **[send email](mailto:newxhbl@hotmail.com)** for any feedback or support for this project.
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=TXMZR93BX5Y2Y&lc=US&item_name=Kodi%20Dual%20Audio%20Project&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted)
+
+
 ![Kodi Logo](docs/resources/banner.png)
 
 <p align="center">
