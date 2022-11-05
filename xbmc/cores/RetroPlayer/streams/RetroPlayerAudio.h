@@ -60,6 +60,8 @@ public:
 private:
   CRPProcessInfo& m_processInfo;
   IAEStream* m_pAudioStream;
+  IAEStream* m_pAudioStream2;
+  bool m_bAudio2;
   bool m_bAudioEnabled;
 };
 } // namespace RETRO
