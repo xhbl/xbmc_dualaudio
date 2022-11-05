@@ -1303,6 +1303,9 @@ void CXBMCApp::onReceive(CJNIIntent intent)
       IAE *iae = CServiceBroker::GetActiveAE();
       if (iae)
         iae->DeviceChange();
+      IAE *iae2 = CServiceBroker::GetActiveAE(true);
+      if (iae2)
+        iae2->DeviceChange();
     }
   }
   else if (action == "android.media.action.HDMI_AUDIO_PLUG")
