@@ -26,6 +26,9 @@ void CAESinkFactory::RegisterSink(const AESinkRegEntry& regEntry)
   IAE *ae = CServiceBroker::GetActiveAE();
   if (ae)
     ae->DeviceChange();
+  IAE *ae2 = CServiceBroker::GetActiveAE(true);
+  if (ae2)
+    ae2->DeviceChange();
 }
 
 void CAESinkFactory::ClearSinks()
@@ -69,6 +72,9 @@ IAESink *CAESinkFactory::Create(std::string &device, AEAudioFormat &desiredForma
   AEAudioFormat tmpFormat = desiredFormat;
   IAESink *sink;
   std::string tmpDevice = device;
+
+  if (device == "NULL")
+    driver = "NULL";
 
   for (const auto& reg : m_AESinkRegEntry)
   {
