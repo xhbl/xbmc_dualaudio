@@ -16,6 +16,7 @@
 #include "filesystem/File.h"
 #include "filesystem/IFileTypes.h"
 #include "games/dialogs/DialogGameDefines.h"
+#include "guilib/LocalizeStrings.h"
 #include "utils/URIUtils.h"
 #include "utils/log.h"
 
@@ -39,7 +40,7 @@ std::unique_ptr<ISavestate> CSavestateDatabase::AllocateSavestate()
   return savestate;
 }
 
-bool CSavestateDatabase::AddSavestate(std::string& savestatePath,
+bool CSavestateDatabase::AddSavestate(const std::string& savestatePath,
                                       const std::string& gamePath,
                                       const ISavestate& save)
 {
@@ -47,17 +48,9 @@ bool CSavestateDatabase::AddSavestate(std::string& savestatePath,
   std::string path;
 
   if (savestatePath.empty())
-  {
-    path = MakePath(gamePath);
-    path = URIUtils::AddFileToFolder(path, save.Created().GetAsSaveString() + SAVESTATE_EXTENSION);
-
-    // return the path to the new savestate
-    savestatePath = path;
-  }
+    path = MakeSavestatePath(gamePath, save.Created());
   else
-  {
     path = savestatePath;
-  }
 
   CLog::Log(LOGDEBUG, "Saving savestate to {}", CURL::GetRedacted(path));
 
@@ -66,7 +59,7 @@ bool CSavestateDatabase::AddSavestate(std::string& savestatePath,
   if (save.Serialize(data, size))
   {
     XFILE::CFile file;
-    if (file.OpenForWrite(path))
+    if (file.OpenForWrite(path, true))
     {
       const ssize_t written = file.Write(data, size);
       if (written == static_cast<ssize_t>(size))
@@ -146,30 +139,54 @@ bool CSavestateDatabase::GetSavestatesNav(CFileItemList& items,
     std::unique_ptr<ISavestate> savestate = AllocateSavestate();
     GetSavestate(items[i]->GetPath(), *savestate);
 
-    const std::string label = savestate->Label();
-
-    CDateTime dateUTC = CDateTime::FromUTCDateTime(savestate->Created());
-    if (label.empty())
-      items[i]->SetLabel(dateUTC.GetAsLocalizedDateTime(false, false));
-    else
-    {
-      items[i]->SetLabel(label);
-      items[i]->SetLabel2(dateUTC.GetAsLocalizedDateTime(false, false));
-    }
-
-    items[i]->SetArt("icon", MakeThumbnailPath(items[i]->GetPath()));
-    items[i]->SetProperty(SAVESTATE_CAPTION, savestate->Caption());
-    items[i]->m_dateTime = dateUTC;
+    GetSavestateItem(*savestate, items[i]->GetPath(), *items[i]);
   }
 
   return true;
 }
 
-bool CSavestateDatabase::RenameSavestate(const std::string& savestatePath, const std::string& label)
+void CSavestateDatabase::GetSavestateItem(const ISavestate& savestate,
+                                          const std::string& savestatePath,
+                                          CFileItem& item)
+{
+  CDateTime dateUTC = CDateTime::FromUTCDateTime(savestate.Created());
+
+  std::string label;
+  std::string label2;
+
+  // Date has the lowest priority of being shown
+  label = dateUTC.GetAsLocalizedDateTime(false, false);
+
+  // Label has the next priority
+  if (!savestate.Label().empty())
+  {
+    label2 = std::move(label);
+    label = savestate.Label();
+  }
+
+  // "Autosave" has the highest priority
+  if (savestate.Type() == SAVE_TYPE::AUTO)
+  {
+    label2 = std::move(label);
+    label = g_localizeStrings.Get(15316); // "Autosave"
+  }
+
+  item.SetLabel(label);
+  item.SetLabel2(label2);
+  item.SetPath(savestatePath);
+  item.SetArt("screenshot", MakeThumbnailPath(savestatePath));
+  item.SetProperty(SAVESTATE_LABEL, savestate.Label());
+  item.SetProperty(SAVESTATE_CAPTION, savestate.Caption());
+  item.SetProperty(SAVESTATE_GAME_CLIENT, savestate.GameClientID());
+  item.m_dateTime = dateUTC;
+}
+
+std::unique_ptr<ISavestate> CSavestateDatabase::RenameSavestate(const std::string& savestatePath,
+                                                                const std::string& label)
 {
   std::unique_ptr<ISavestate> savestate = AllocateSavestate();
   if (!GetSavestate(savestatePath, *savestate))
-    return false;
+    return {};
 
   std::unique_ptr<ISavestate> newSavestate = AllocateSavestate();
 
@@ -190,9 +207,9 @@ bool CSavestateDatabase::RenameSavestate(const std::string& savestatePath, const
 
   std::string path = savestatePath;
   if (!AddSavestate(path, "", *newSavestate))
-    return false;
+    return {};
 
-  return true;
+  return newSavestate;
 }
 
 bool CSavestateDatabase::DeleteSavestate(const std::string& savestatePath)
@@ -212,6 +229,13 @@ bool CSavestateDatabase::ClearSavestatesOfGame(const std::string& gamePath,
 {
   //! @todo
   return false;
+}
+
+std::string CSavestateDatabase::MakeSavestatePath(const std::string& gamePath,
+                                                  const CDateTime& creationTime)
+{
+  std::string path = MakePath(gamePath);
+  return URIUtils::AddFileToFolder(path, creationTime.GetAsSaveString() + SAVESTATE_EXTENSION);
 }
 
 std::string CSavestateDatabase::MakeThumbnailPath(const std::string& savestatePath)

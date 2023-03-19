@@ -173,7 +173,11 @@ void CAsyncGetItemsForPlaylist::GetItemsForPlaylist(const std::shared_ptr<CFileI
           fileFormatter.FormatLabels(i.get());
       }
 
-      const SortDescription sortDesc = GetSortDescription(*state, items);
+      SortDescription sortDesc;
+      if (CServiceBroker::GetGUI()->GetWindowManager().GetActiveWindow() == viewStateWindowId)
+        sortDesc = state->GetSortMethod();
+      else
+        sortDesc = GetSortDescription(*state, items);
 
       if (sortDesc.sortBy == SortByLabel)
         items.ClearSortState();
@@ -426,8 +430,11 @@ bool IsItemPlayable(const CFileItem& item)
         StringUtils::StartsWith(item.GetPath(), StringUtils::Format("{}/mixed/", path)))
       return true;
 
-    // Unknown location. Type cannot be determined.
-    return false;
+    if (!item.m_bIsFolder)
+    {
+      // Unknown location. Type cannot be determined for non-folder items.
+      return false;
+    }
   }
 
   if (item.m_bIsFolder &&
@@ -453,10 +460,11 @@ bool IsItemPlayable(const CFileItem& item)
   {
     return true;
   }
-  else if (!item.m_bIsShareOrDrive && item.m_bIsFolder)
+  else if (item.m_bIsFolder)
   {
     // Not a video-specific folder (like file:// or nfs://). Allow play if context is Video window.
-    if (CServiceBroker::GetGUI()->GetWindowManager().GetActiveWindow() == WINDOW_VIDEO_NAV)
+    if (CServiceBroker::GetGUI()->GetWindowManager().GetActiveWindow() == WINDOW_VIDEO_NAV &&
+        item.GetPath() != "add") // Exclude "Add video source" item
       return true;
   }
 

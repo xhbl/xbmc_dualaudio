@@ -19,6 +19,7 @@ extern "C"
 }
 
 #include <atomic>
+#include <future>
 #include <map>
 #include <memory>
 #include <set>
@@ -39,6 +40,8 @@ class CRPProcessInfo;
 class IGUIRenderSettings;
 class IRenderBuffer;
 class IRenderBufferPool;
+class ISavestate;
+struct VideoStreamBuffer;
 
 /*!
  * \brief Renders video frames provided by the game loop
@@ -75,14 +78,22 @@ public:
    */
   CGUIRenderTargetFactory* GetGUIRenderTargetFactory() { return m_renderControlFactory.get(); }
 
+  // Stream properties, set upon configuration
+  AVPixelFormat GetPixelFormat() const { return m_format; }
+  unsigned int GetNominalWidth() const { return m_nominalWidth; }
+  unsigned int GetNominalHeight() const { return m_nominalHeight; }
+  unsigned int GetMaxWidth() const { return m_maxWidth; }
+  unsigned int GetMaxHeight() const { return m_maxHeight; }
+  float GetPixelAspectRatio() const { return m_pixelAspectRatio; }
+
   // Functions called from game loop
   bool Configure(AVPixelFormat format,
                  unsigned int nominalWidth,
                  unsigned int nominalHeight,
                  unsigned int maxWidth,
-                 unsigned int maxHeight);
-  bool GetVideoBuffer(
-      unsigned int width, unsigned int height, AVPixelFormat& format, uint8_t*& data, size_t& size);
+                 unsigned int maxHeight,
+                 float pixelAspectRatio);
+  std::vector<VideoStreamBuffer> GetVideoBuffers(unsigned int width, unsigned int height);
   void AddFrame(const uint8_t* data,
                 size_t size,
                 unsigned int width,
@@ -108,19 +119,25 @@ public:
   bool SupportsRenderFeature(RENDERFEATURE feature) const override;
   bool SupportsScalingMethod(SCALINGMETHOD method) const override;
 
-  void SaveThumbnail(const std::string& path);
+  // Savestate functions
+  void SaveThumbnail(const std::string& thumbnailPath);
+
+  // Savestate functions
+  void CacheVideoFrame(const std::string& savestatePath);
+  void SaveVideoFrame(const std::string& savestatePath, ISavestate& savestate);
+  void ClearVideoFrame(const std::string& savestatePath);
 
 private:
   /*!
    * \brief Get or create a renderer compatible with the given render settings
    */
-  std::shared_ptr<CRPBaseRenderer> GetRenderer(const IGUIRenderSettings* renderSettings);
+  std::shared_ptr<CRPBaseRenderer> GetRendererForSettings(const IGUIRenderSettings* renderSettings);
 
   /*!
    * \brief Get or create a renderer for the given buffer pool and render settings
    */
-  std::shared_ptr<CRPBaseRenderer> GetRenderer(IRenderBufferPool* bufferPool,
-                                               const CRenderSettings& renderSettings);
+  std::shared_ptr<CRPBaseRenderer> GetRendererForPool(IRenderBufferPool* bufferPool,
+                                                      const CRenderSettings& renderSettings);
 
   /*!
    * \brief Render a frame using the given renderer
@@ -139,6 +156,12 @@ private:
    * \brief Get a render buffer belonging to the specified pool
    */
   IRenderBuffer* GetRenderBuffer(IRenderBufferPool* bufferPool);
+
+  /*!
+   * \brief Get a render buffer containing pixels from the specified savestate
+   */
+  IRenderBuffer* GetRenderBufferForSavestate(const std::string& savestatePath,
+                                             const IRenderBufferPool* bufferPool);
 
   /*!
    * \brief Create a render buffer for the specified pool from a cached frame
@@ -188,6 +211,11 @@ private:
 
   void CheckFlush();
 
+  void GetVideoFrame(IRenderBuffer*& readableBuffer, std::vector<uint8_t>& cachedFrame);
+  void FreeVideoFrame(IRenderBuffer* readableBuffer, std::vector<uint8_t> cachedFrame);
+  void LoadVideoFrameAsync(const std::string& savestatePath);
+  void LoadVideoFrameSync(const std::string& savestatePath);
+
   // Construction parameters
   CRPProcessInfo& m_processInfo;
   CRenderContext& m_renderContext;
@@ -198,17 +226,24 @@ private:
 
   // Stream properties
   AVPixelFormat m_format = AV_PIX_FMT_NONE;
+  unsigned int m_nominalWidth{0};
+  unsigned int m_nominalHeight{0};
   unsigned int m_maxWidth = 0;
   unsigned int m_maxHeight = 0;
+  float m_pixelAspectRatio{1.0f};
 
   // Render resources
   std::set<std::shared_ptr<CRPBaseRenderer>> m_renderers;
   std::vector<IRenderBuffer*> m_pendingBuffers; // Only access from game thread
   std::vector<IRenderBuffer*> m_renderBuffers;
-  std::map<AVPixelFormat, SwsContext*> m_scalers;
+  std::map<AVPixelFormat, std::map<AVPixelFormat, SwsContext*>> m_scalers; // From -> to -> context
   std::vector<uint8_t> m_cachedFrame;
   unsigned int m_cachedWidth = 0;
   unsigned int m_cachedHeight = 0;
+  unsigned int m_cachedRotationCCW{0};
+  std::map<std::string, std::vector<IRenderBuffer*>>
+      m_savestateBuffers; // Render buffers for savestates
+  std::vector<std::future<void>> m_savestateThreads;
 
   // State parameters
   enum class RENDER_STATE

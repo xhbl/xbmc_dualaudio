@@ -11,6 +11,8 @@
 #include <memory>
 #include <string>
 
+class CDateTime;
+class CFileItem;
 class CFileItemList;
 
 namespace KODI
@@ -27,7 +29,7 @@ public:
 
   static std::unique_ptr<ISavestate> AllocateSavestate();
 
-  bool AddSavestate(std::string& savestatePath,
+  bool AddSavestate(const std::string& savestatePath,
                     const std::string& gamePath,
                     const ISavestate& save);
 
@@ -37,17 +39,23 @@ public:
                         const std::string& gamePath,
                         const std::string& gameClient = "");
 
-  bool RenameSavestate(const std::string& savestatePath, const std::string& label);
+  static void GetSavestateItem(const ISavestate& savestate,
+                               const std::string& savestatePath,
+                               CFileItem& item);
+
+  std::unique_ptr<ISavestate> RenameSavestate(const std::string& savestatePath,
+                                              const std::string& label);
 
   bool DeleteSavestate(const std::string& savestatePath);
 
   bool ClearSavestatesOfGame(const std::string& gamePath, const std::string& gameClient = "");
 
-  std::string MakeThumbnailPath(const std::string& savestatePath);
+  static std::string MakeSavestatePath(const std::string& gamePath, const CDateTime& creationTime);
+  static std::string MakeThumbnailPath(const std::string& savestatePath);
 
 private:
-  std::string MakePath(const std::string& gamePath);
-  bool CreateFolderIfNotExists(const std::string& path);
+  static std::string MakePath(const std::string& gamePath);
+  static bool CreateFolderIfNotExists(const std::string& path);
 };
 } // namespace RETRO
 } // namespace KODI

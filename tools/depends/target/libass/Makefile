@@ -13,6 +13,10 @@ ifeq ($(OS),android)
   # Android API Level 21/22 requires explicit link.
   # This doesnt appear to be required for API Level 23+ (Android 6+)
   export LDFLAGS+= -lstdc++
+  
+  ifeq ($(CPU),i686)
+    export ASFLAGS+= -DPIC=1
+  endif
 endif
 
 # configuration settings
@@ -24,7 +28,7 @@ LIBDYLIB=$(PLATFORM)/$(LIBNAME)/.libs/$(LIBNAME).a
 all: .installed-$(PLATFORM)
 
 
-$(PLATFORM): $(TARBALLS_LOCATION)/$(ARCHIVE).$(HASH_TYPE) $(DEPS)
+$(PLATFORM): $(DEPS) | $(TARBALLS_LOCATION)/$(ARCHIVE).$(HASH_TYPE)
 	rm -rf $(PLATFORM)/*; mkdir -p $(PLATFORM)
 	cd $(PLATFORM); $(ARCHIVE_TOOL) $(ARCHIVE_TOOL_FLAGS) $(TARBALLS_LOCATION)/$(ARCHIVE)
 	cd $(PLATFORM); $(AUTORECONF) -vif

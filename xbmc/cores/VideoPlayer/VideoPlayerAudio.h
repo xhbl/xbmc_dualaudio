@@ -118,6 +118,10 @@ protected:
   SInfo            m_info;
 
   bool m_displayReset = false;
+  unsigned int m_disconAdjustTimeMs = 10; // maximum sync-off before adjusting
+  int m_disconAdjustCounter = 0;
+  XbmcThreads::EndTime<> m_disconTimer;
+  bool m_disconLearning = false;
 
   bool   m_bAudio2;
   double m_audiodiff;

@@ -9,12 +9,20 @@
 #include "DialogInGameSaves.h"
 
 #include "ServiceBroker.h"
+#include "URL.h"
+#include "XBDateTime.h"
 #include "cores/RetroPlayer/guibridge/GUIGameRenderManager.h"
 #include "cores/RetroPlayer/guibridge/GUIGameSettingsHandle.h"
+#include "cores/RetroPlayer/guicontrols/GUIGameControl.h"
 #include "cores/RetroPlayer/playback/IPlayback.h"
 #include "cores/RetroPlayer/savestates/ISavestate.h"
 #include "cores/RetroPlayer/savestates/SavestateDatabase.h"
+#include "dialogs/GUIDialogContextMenu.h"
+#include "dialogs/GUIDialogOK.h"
+#include "dialogs/GUIDialogYesNo.h"
 #include "games/dialogs/DialogGameDefines.h"
+#include "guilib/GUIKeyboardFactory.h"
+#include "guilib/GUIMessage.h"
 #include "guilib/LocalizeStrings.h"
 #include "guilib/WindowIDs.h"
 #include "settings/GameSettings.h"
@@ -25,51 +33,92 @@ using namespace KODI;
 using namespace GAME;
 using namespace RETRO;
 
-CDialogInGameSaves::CDialogInGameSaves() : CDialogGameVideoSelect(WINDOW_DIALOG_IN_GAME_SAVES)
+namespace
 {
+CFileItemPtr CreateNewSaveItem()
+{
+  CFileItemPtr item = std::make_shared<CFileItem>(g_localizeStrings.Get(15314)); // "Save"
+
+  // A nonexistent path ensures a gamewindow control won't render any pixels
+  item->SetPath(NO_PIXEL_DATA);
+  item->SetArt("icon", "DefaultAddSource.png");
+  item->SetProperty(SAVESTATE_CAPTION,
+                    g_localizeStrings.Get(15315)); // "Save progress to a new save file"
+
+  return item;
+}
+} // namespace
+
+CDialogInGameSaves::CDialogInGameSaves()
+  : CDialogGameVideoSelect(WINDOW_DIALOG_IN_GAME_SAVES), m_newSaveItem(CreateNewSaveItem())
+{
+}
+
+bool CDialogInGameSaves::OnMessage(CGUIMessage& message)
+{
+  switch (message.GetMessage())
+  {
+    case GUI_MSG_REFRESH_THUMBS:
+    {
+      if (message.GetControlId() == GetID())
+      {
+        const std::string& itemPath = message.GetStringParam();
+        CGUIListItemPtr itemInfo = message.GetItem();
+
+        if (!itemPath.empty())
+        {
+          OnItemRefresh(itemPath, std::move(itemInfo));
+        }
+        else
+        {
+          InitSavedGames();
+          RefreshList();
+        }
+
+        return true;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+
+  return CDialogGameVideoSelect::OnMessage(message);
 }
 
 std::string CDialogInGameSaves::GetHeading()
 {
-  return g_localizeStrings.Get(35249); // "Saved games"
+  return g_localizeStrings.Get(35249); // "Save / Load"
 }
 
 void CDialogInGameSaves::PreInit()
 {
-  m_items.Clear();
-
   InitSavedGames();
-
-  CFileItemPtr item = std::make_shared<CFileItem>(g_localizeStrings.Get(15314)); // "Save progress"
-  item->SetArt("icon", "DefaultAddSource.png");
-  item->SetPath("");
-  item->SetProperty(SAVESTATE_CAPTION,
-                    g_localizeStrings.Get(15315)); // "Save progress to new save file"
-
-  m_items.AddFront(item, 0);
 }
 
 void CDialogInGameSaves::InitSavedGames()
 {
+  m_savestateItems.Clear();
+
   auto gameSettings = CServiceBroker::GetGameRenderManager().RegisterGameSettingsDialog();
 
-  // save current game
-  gameSettings->CreateSavestate(true);
-
   CSavestateDatabase db;
-  db.GetSavestatesNav(m_items, gameSettings->GetPlayingGame(), gameSettings->GameClientID());
+  db.GetSavestatesNav(m_savestateItems, gameSettings->GetPlayingGame(),
+                      gameSettings->GameClientID());
 
-  m_items.Sort(SortByDate, SortOrderDescending);
+  m_savestateItems.Sort(SortByDate, SortOrderDescending);
 }
 
 void CDialogInGameSaves::GetItems(CFileItemList& items)
 {
-  std::for_each(m_items.cbegin(), m_items.cend(), [&items](const auto& item) { items.Add(item); });
+  items.Add(m_newSaveItem);
+  std::for_each(m_savestateItems.cbegin(), m_savestateItems.cend(),
+                [&items](const auto& item) { items.Add(item); });
 }
 
 void CDialogInGameSaves::OnItemFocus(unsigned int index)
 {
-  if (static_cast<int>(index) < m_items.Size())
+  if (static_cast<int>(index) < 1 + m_savestateItems.Size())
     m_focusedItemIndex = index;
 }
 
@@ -78,25 +127,300 @@ unsigned int CDialogInGameSaves::GetFocusedItem() const
   return m_focusedControl;
 }
 
-void CDialogInGameSaves::PostExit()
+void CDialogInGameSaves::OnItemRefresh(const std::string& itemPath, CGUIListItemPtr itemInfo)
 {
-  m_items.Clear();
+  // Turn the message params into a savestate item
+  CFileItemPtr item = TranslateMessageItem(itemPath, std::move(itemInfo));
+  if (item)
+  {
+    // Look up existing savestate by path
+    auto it =
+        std::find_if(m_savestateItems.cbegin(), m_savestateItems.cend(),
+                     [&itemPath](const CFileItemPtr& item) { return item->GetPath() == itemPath; });
+
+    // Update savestate or add a new one
+    if (it != m_savestateItems.cend())
+      **it = std::move(*item);
+    else
+      m_savestateItems.AddFront(std::move(item), 0);
+
+    RefreshList();
+  }
 }
 
-void CDialogInGameSaves::OnClickAction()
+void CDialogInGameSaves::PostExit()
 {
-  if (static_cast<int>(m_focusedItemIndex) < m_items.Size())
-  {
-    auto gameSettings = CServiceBroker::GetGameRenderManager().RegisterGameSettingsDialog();
-    std::string savePath = m_items[m_focusedItemIndex]->GetPath();
+  m_savestateItems.Clear();
+}
 
-    if (savePath.empty())
+bool CDialogInGameSaves::OnClickAction()
+{
+  if (static_cast<int>(m_focusedItemIndex) < 1 + m_savestateItems.Size())
+  {
+    if (m_focusedItemIndex <= 0)
     {
-      gameSettings->CreateSavestate(false);
+      OnNewSave();
+      return true;
     }
     else
-      gameSettings->LoadSavestate(savePath);
+    {
+      CFileItemPtr focusedItem = m_savestateItems[m_focusedItemIndex - 1];
+      if (focusedItem)
+      {
+        OnLoad(*focusedItem);
+        return true;
+      }
+    }
+  }
 
+  return false;
+}
+
+bool CDialogInGameSaves::OnMenuAction()
+{
+  // Start at index 1 to account for leading "Save" item
+  if (1 <= m_focusedItemIndex && static_cast<int>(m_focusedItemIndex) < 1 + m_savestateItems.Size())
+  {
+    CFileItemPtr focusedItem = m_savestateItems[m_focusedItemIndex - 1];
+    if (focusedItem)
+    {
+      CContextButtons buttons;
+
+      buttons.Add(0, 13206); // "Overwrite"
+      buttons.Add(1, 118); // "Rename"
+      buttons.Add(2, 117); // "Delete"
+
+      const int index = CGUIDialogContextMenu::Show(buttons);
+
+      if (index == 0)
+        OnOverwrite(*focusedItem);
+      if (index == 1)
+        OnRename(*focusedItem);
+      else if (index == 2)
+        OnDelete(*focusedItem);
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool CDialogInGameSaves::OnOverwriteAction()
+{
+  // Start at index 1 to account for leading "Save" item
+  if (1 <= m_focusedItemIndex && static_cast<int>(m_focusedItemIndex) < 1 + m_savestateItems.Size())
+  {
+    CFileItemPtr focusedItem = m_savestateItems[m_focusedItemIndex - 1];
+    if (focusedItem)
+    {
+      OnOverwrite(*focusedItem);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool CDialogInGameSaves::OnRenameAction()
+{
+  // Start at index 1 to account for leading "Save" item
+  if (1 <= m_focusedItemIndex && static_cast<int>(m_focusedItemIndex) < 1 + m_savestateItems.Size())
+  {
+    CFileItemPtr focusedItem = m_savestateItems[m_focusedItemIndex - 1];
+    if (focusedItem)
+    {
+      OnRename(*focusedItem);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool CDialogInGameSaves::OnDeleteAction()
+{
+  // Start at index 1 to account for leading "Save" item
+  if (1 <= m_focusedItemIndex && static_cast<int>(m_focusedItemIndex) < 1 + m_savestateItems.Size())
+  {
+    CFileItemPtr focusedItem = m_savestateItems[m_focusedItemIndex - 1];
+    if (focusedItem)
+    {
+      OnDelete(*focusedItem);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void CDialogInGameSaves::OnNewSave()
+{
+  auto gameSettings = CServiceBroker::GetGameRenderManager().RegisterGameSettingsDialog();
+
+  const std::string savestatePath = gameSettings->CreateSavestate(false);
+  if (savestatePath.empty())
+  {
+    // "Error"
+    // "An unknown error has occurred."
+    CGUIDialogOK::ShowAndGetInput(257, 24071);
+    return;
+  }
+
+  // Create a simulated savestate to update the GUI faster. We will be notified
+  // of the real savestate info via OnMessage() when the savestate creation
+  // completes.
+  auto savestate = RETRO::CSavestateDatabase::AllocateSavestate();
+
+  savestate->SetType(SAVE_TYPE::MANUAL);
+  savestate->SetCreated(CDateTime::GetUTCDateTime());
+
+  savestate->Finalize();
+
+  CFileItemPtr item = std::make_shared<CFileItem>();
+  CSavestateDatabase::GetSavestateItem(*savestate, savestatePath, *item);
+
+  m_savestateItems.AddFront(std::move(item), 0);
+
+  RefreshList();
+}
+
+void CDialogInGameSaves::OnLoad(CFileItem& focusedItem)
+{
+  auto gameSettings = CServiceBroker::GetGameRenderManager().RegisterGameSettingsDialog();
+
+  // Load savestate
+  if (gameSettings->LoadSavestate(focusedItem.GetPath()))
+  {
+    // Close OSD on successful load
     gameSettings->CloseOSD();
   }
+  else
+  {
+    // "Error"
+    // "An unknown error has occurred."
+    CGUIDialogOK::ShowAndGetInput(257, 24071);
+  }
+}
+
+void CDialogInGameSaves::OnOverwrite(CFileItem& focusedItem)
+{
+  std::string savestatePath = focusedItem.GetPath();
+  if (savestatePath.empty())
+    return;
+
+  auto gameSettings = CServiceBroker::GetGameRenderManager().RegisterGameSettingsDialog();
+
+  // Update savestate
+  if (gameSettings->UpdateSavestate(savestatePath))
+  {
+    // Create a simulated savestate to update the GUI faster. We will be
+    // notified of the real savestate info via OnMessage() when the
+    // overwriting completes.
+    auto savestate = RETRO::CSavestateDatabase::AllocateSavestate();
+
+    savestate->SetType(SAVE_TYPE::MANUAL);
+    savestate->SetLabel(focusedItem.GetProperty(SAVESTATE_LABEL).asString());
+    savestate->SetCaption(focusedItem.GetProperty(SAVESTATE_CAPTION).asString());
+    savestate->SetCreated(CDateTime::GetUTCDateTime());
+
+    savestate->Finalize();
+
+    CSavestateDatabase::GetSavestateItem(*savestate, savestatePath, focusedItem);
+
+    RefreshList();
+  }
+  else
+  {
+    // Log an error and notify the user
+    CLog::Log(LOGERROR, "Failed to overwrite savestate at {}", CURL::GetRedacted(savestatePath));
+
+    // "Error"
+    // "An unknown error has occurred."
+    CGUIDialogOK::ShowAndGetInput(257, 24071);
+  }
+}
+
+void CDialogInGameSaves::OnRename(CFileItem& focusedItem)
+{
+  const std::string& savestatePath = focusedItem.GetPath();
+  if (savestatePath.empty())
+    return;
+
+  RETRO::CSavestateDatabase db;
+
+  std::string label;
+
+  std::unique_ptr<RETRO::ISavestate> savestate = RETRO::CSavestateDatabase::AllocateSavestate();
+  if (db.GetSavestate(savestatePath, *savestate))
+    label = savestate->Label();
+
+  // "Enter new filename"
+  if (CGUIKeyboardFactory::ShowAndGetInput(label, CVariant{g_localizeStrings.Get(16013)}, true) &&
+      label != savestate->Label())
+  {
+    std::unique_ptr<RETRO::ISavestate> newSavestate = db.RenameSavestate(savestatePath, label);
+    if (newSavestate)
+    {
+      RETRO::CSavestateDatabase::GetSavestateItem(*newSavestate, savestatePath, focusedItem);
+
+      RefreshList();
+    }
+    else
+    {
+      // "Error"
+      // "An unknown error has occurred."
+      CGUIDialogOK::ShowAndGetInput(257, 24071);
+    }
+  }
+}
+
+void CDialogInGameSaves::OnDelete(CFileItem& focusedItem)
+{
+  // "Confirm delete"
+  // "Would you like to delete the selected file(s)?[CR]Warning - this action can't be undone!"
+  if (CGUIDialogYesNo::ShowAndGetInput(CVariant{122}, CVariant{125}))
+  {
+    RETRO::CSavestateDatabase db;
+    if (db.DeleteSavestate(focusedItem.GetPath()))
+    {
+      m_savestateItems.Remove(&focusedItem);
+
+      RefreshList();
+
+      auto gameSettings = CServiceBroker::GetGameRenderManager().RegisterGameSettingsDialog();
+      gameSettings->FreeSavestateResources(focusedItem.GetPath());
+    }
+    else
+    {
+      // "Error"
+      // "An unknown error has occurred."
+      CGUIDialogOK::ShowAndGetInput(257, 24071);
+    }
+  }
+}
+
+CFileItemPtr CDialogInGameSaves::TranslateMessageItem(const std::string& messagePath,
+                                                      CGUIListItemPtr messageItem)
+{
+  CFileItemPtr item;
+
+  if (messageItem && messageItem->IsFileItem())
+    item = std::static_pointer_cast<CFileItem>(messageItem);
+  else if (messageItem)
+    item = std::make_shared<CFileItem>(*messageItem);
+  else if (!messagePath.empty())
+  {
+    item = std::make_shared<CFileItem>();
+
+    // Load savestate if no item info was given
+    auto savestate = RETRO::CSavestateDatabase::AllocateSavestate();
+    RETRO::CSavestateDatabase db;
+    if (db.GetSavestate(messagePath, *savestate))
+      RETRO::CSavestateDatabase::GetSavestateItem(*savestate, messagePath, *item);
+    else
+      item.reset();
+  }
+
+  return item;
 }

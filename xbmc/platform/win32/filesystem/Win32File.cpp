@@ -484,6 +484,8 @@ int CWin32File::Stat(const CURL& url, struct __stat64* statData)
 
   FindClose(hSearch);
 
+  *statData = {};
+
   /* set st_gid */
   statData->st_gid = 0; // UNIX group ID is always zero on Win32
 
@@ -624,6 +626,8 @@ int CWin32File::Stat(struct __stat64* statData)
   if (m_hFile == INVALID_HANDLE_VALUE)
     return -1;
 
+  *statData = {};
+
   /* set st_gid */
   statData->st_gid = 0; // UNIX group ID is always zero on Win32
 
@@ -754,6 +758,14 @@ int CWin32File::Stat(struct __stat64* statData)
   statData->st_mode |= (statData->st_mode & (_S_IREAD | _S_IWRITE | _S_IEXEC)) >> 3;
   // copy user RWX rights to other rights
   statData->st_mode |= (statData->st_mode & (_S_IREAD | _S_IWRITE | _S_IEXEC)) >> 6;
+
+  return 0;
+}
+
+int CWin32File::GetChunkSize()
+{
+  if (m_smbFile)
+    return 64 * 1024;
 
   return 0;
 }

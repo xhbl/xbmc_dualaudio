@@ -22,18 +22,9 @@
 #include "utils/StringUtils.h"
 #include "utils/log.h"
 
-VideoPlayerCodec::VideoPlayerCodec()
+VideoPlayerCodec::VideoPlayerCodec() : m_processInfo(CProcessInfo::CreateInstance())
 {
   m_CodecName = "VideoPlayer";
-  m_pDemuxer = NULL;
-  m_nAudioStream = -1;
-  m_nDecodedLen = 0;
-  m_bInited = false;
-  m_pResampler = NULL;
-  m_needConvert = false;
-  m_channels = 0;
-
-  m_processInfo.reset(CProcessInfo::CreateInstance());
 }
 
 VideoPlayerCodec::~VideoPlayerCodec()
@@ -186,7 +177,9 @@ bool VideoPlayerCodec::Init(const CFileItem &file, unsigned int filecache)
   // we have to decode initial data in order to get channels/samplerate
   // for sanity - we read no more than 10 packets
   int nErrors = 0;
-  for (int nPacket=0; nPacket < 10 && (m_channels == 0 || m_format.m_sampleRate == 0); nPacket++)
+  for (int nPacket = 0;
+       nPacket < 10 && (m_channels == 0 || m_format.m_sampleRate == 0 || m_format.m_frameSize == 0);
+       nPacket++)
   {
     uint8_t dummy[256];
     size_t nSize = 256;
@@ -244,6 +237,10 @@ bool VideoPlayerCodec::Init(const CFileItem &file, unsigned int filecache)
   if (NeedConvert(m_srcFormat.m_dataFormat))
   {
     m_needConvert = true;
+    // if we don't know the framesize yet, we will fail when converting
+    if (m_srcFormat.m_frameSize == 0)
+      return false;
+
     m_pResampler = ActiveAE::CAEResampleFactory::Create();
 
     SampleConfig dstConfig, srcConfig;

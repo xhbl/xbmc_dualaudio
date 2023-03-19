@@ -98,7 +98,6 @@ public:
   // videosync
   std::unique_ptr<CVideoSync> GetVideoSync(void *clock) override;
 
-  bool WindowedMode() const { return m_state != WINDOW_STATE_FULLSCREEN; }
   bool SetFullScreen(bool fullScreen, RESOLUTION_INFO& res, bool blankOtherDisplays) override;
 
   std::vector<std::string> GetConnectedOutputs() override;
@@ -168,6 +167,16 @@ protected:
   void ResolutionChanged();
   static void SetForegroundWindowInternal(HWND hWnd);
   static RECT GetVirtualScreenRect();
+  /*!
+   * Retrieve the work area of the screen (exclude task bar and other occlusions)
+   */
+  RECT GetScreenWorkArea(HMONITOR handle) const;
+  /*!
+   * Retrieve size of the title bar and borders
+   * Add to coordinates to convert client coordinates to window coordinates
+   * Substract from coordinates to convert from window coordinates to client coordinates
+   */
+  RECT GetNcAreaOffsets(DWORD dwStyle, BOOL bMenu, DWORD dwExStyle) const;
 
   HWND m_hWnd;
   HMONITOR m_hMonitor;

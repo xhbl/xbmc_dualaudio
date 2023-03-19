@@ -28,6 +28,7 @@ class CGameServices;
 namespace RETRO
 {
 class CCheevos;
+class CGUIGameMessenger;
 class CRetroPlayerInput;
 class CRPProcessInfo;
 class CRPRenderManager;
@@ -73,7 +74,9 @@ public:
   std::string GameClientID() const override;
   std::string GetPlayingGame() const override;
   std::string CreateSavestate(bool autosave) override;
-  bool LoadSavestate(const std::string& path) override;
+  bool UpdateSavestate(const std::string& savestatePath) override;
+  bool LoadSavestate(const std::string& savestatePath) override;
+  void FreeSavestateResources(const std::string& savestatePath) override;
   void CloseOSDCallback() override;
 
   // Implementation of IPlaybackCallback
@@ -94,7 +97,7 @@ private:
   void OnSpeedChange(double newSpeed);
 
   // Playback functions
-  void CreatePlayback(bool bRestoreState, const std::string& savestatePath);
+  void CreatePlayback(const std::string& savestatePath);
   void ResetPlayback();
 
   /*!
@@ -123,6 +126,7 @@ private:
 
   // Subsystems
   std::unique_ptr<CRPProcessInfo> m_processInfo;
+  std::unique_ptr<CGUIGameMessenger> m_guiMessenger;
   std::unique_ptr<CRPRenderManager> m_renderManager;
   std::unique_ptr<CRPStreamManager> m_streamManager;
   std::unique_ptr<CRetroPlayerInput> m_input;
