@@ -974,7 +974,7 @@ inline bool PAPlayer::ProcessStream(StreamInfo *si, double &freeBufferTime)
       else
         si->m_endOffset = 0;
       si->m_framesSent = 0;
-	  si->m_framesSent2 = 0;
+      si->m_framesSent2 = 0;
 
       *si->m_fileItem = *si->m_nextFileItem;
       si->m_nextFileItem.reset();
@@ -1047,33 +1047,6 @@ inline bool PAPlayer::ProcessStream(StreamInfo *si, double &freeBufferTime)
 
       freeBufferTime = std::max(freeBufferTime , free_space);
     }
-    if (m_bAudio2)
-    {
-      if (si->m_stream2->IsBuffering())
-        freeBufferTime = 1.0;
-      else
-      {
-        double free_space;
-        if (si->m_audioFormat2.m_dataFormat != AE_FMT_RAW)
-          free_space = (double)(si->m_stream2->GetSpace() / si->m_bytesPerSample2) / si->m_audioFormat2.m_sampleRate;
-        else
-        {
-          if (si->m_audioFormat2.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_TRUEHD &&
-              !m_processInfo->WantsRawPassthrough())
-          {
-            free_space = static_cast<double>(si->m_stream2->GetSpace()) *
-                         si->m_audioFormat2.m_streamInfo.GetDuration() / 1000 / 2;
-          }
-          else
-          {
-            free_space = static_cast<double>(si->m_stream2->GetSpace()) *
-                         si->m_audioFormat2.m_streamInfo.GetDuration() / 1000;
-          }
-        }
-
-        freeBufferTime = std::max(freeBufferTime , free_space);
-      }
-    }
   }
 
   return true;
@@ -1115,7 +1088,7 @@ bool PAPlayer::QueueData(StreamInfo *si)
     {
       if(!bAudio2Disabled)
 	    added = si->m_stream2->AddData(&data, 0, frames, 0);
-	  si->m_framesSent2 = si->m_framesSent;
+      si->m_framesSent2 = si->m_framesSent;
     }
   }
   else
@@ -1206,8 +1179,17 @@ bool PAPlayer::QueueData2(StreamInfo *si)
           return false;
         }
       }
-      si->m_framesSent2 += si->m_audioFormat2.m_streamInfo.GetDuration(true) / 1000 * 
-	                       si->m_audioFormat2.m_streamInfo.m_sampleRate;
+      if (si->m_audioFormat2.m_streamInfo.m_type == CAEStreamInfo::STREAM_TYPE_TRUEHD &&
+          !m_processInfo->WantsRawPassthrough(true))
+      {
+        si->m_framesSent2 += si->m_audioFormat2.m_streamInfo.GetDuration() / 1000 / 2 *
+                            si->m_audioFormat2.m_streamInfo.m_sampleRate;
+      }
+      else
+      {
+        si->m_framesSent2 += si->m_audioFormat2.m_streamInfo.GetDuration() / 1000 *
+                            si->m_audioFormat2.m_streamInfo.m_sampleRate;
+      }
     }
   }
 

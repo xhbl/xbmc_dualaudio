@@ -71,7 +71,7 @@ public:
   void SetAudioBitsPerSample(int bitsPerSample, bool bAudio2 = false);
   int GetAudioBitsPerSample(bool bAudio2 = false);
   virtual bool AllowDTSHDDecode();
-  virtual bool WantsRawPassthrough() { return false; }
+  virtual bool WantsRawPassthrough(bool bAudio2 = false) { return false; }
 
   // render info
   void SetRenderClockSync(bool enabled);

@@ -28,7 +28,7 @@ CDVDAudioCodecPassthrough::CDVDAudioCodecPassthrough(CProcessInfo &processInfo, 
   CDVDAudioCodec(processInfo)
 {
   m_format.m_streamInfo.m_type = streamType;
-  m_deviceIsRAW = processInfo.WantsRawPassthrough();
+  m_deviceIsRAW = processInfo.WantsRawPassthrough(m_bAudio2);
 }
 
 CDVDAudioCodecPassthrough::~CDVDAudioCodecPassthrough(void)
