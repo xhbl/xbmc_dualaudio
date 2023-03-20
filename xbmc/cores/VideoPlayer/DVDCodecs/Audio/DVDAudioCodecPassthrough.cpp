@@ -28,7 +28,7 @@ CDVDAudioCodecPassthrough::CDVDAudioCodecPassthrough(CProcessInfo &processInfo, 
   CDVDAudioCodec(processInfo)
 {
   m_format.m_streamInfo.m_type = streamType;
-  m_deviceIsRAW = processInfo.WantsRawPassthrough();
+  m_deviceIsRAW = processInfo.WantsRawPassthrough(m_bAudio2);
 }
 
 CDVDAudioCodecPassthrough::~CDVDAudioCodecPassthrough(void)
@@ -222,6 +222,7 @@ void CDVDAudioCodecPassthrough::GetData(DVDAudioFrame &frame)
 
   frame.passthrough = true;
   frame.format = m_format;
+  frame.framesize = 1;
   frame.planes = 1;
   frame.bits_per_sample = 8;
   frame.duration = DVD_MSEC_TO_TIME(frame.format.m_streamInfo.GetDuration());
