@@ -435,7 +435,8 @@ bool CApplication::Create()
   }
 
   m_pActiveAE.reset(new ActiveAE::CActiveAE());
-  CServiceBroker::RegisterAE(m_pActiveAE.get());
+  m_pActiveAE2.reset(new ActiveAE::CActiveAE(true));
+  CServiceBroker::RegisterAE(m_pActiveAE.get(), m_pActiveAE2.get());
 
   // initialize m_replayGainSettings
   GetComponent<CApplicationVolumeHandling>()->CacheReplayGainSettings(*settings);
@@ -618,6 +619,8 @@ bool CApplication::InitWindow(RESOLUTION res)
 bool CApplication::Initialize()
 {
   m_pActiveAE->Start();
+  if(m_pActiveAE2)
+    m_pActiveAE2->Start();
   // restore AE's previous volume state
 
   const auto appVolume = GetComponent<CApplicationVolumeHandling>();
@@ -625,6 +628,7 @@ bool CApplication::Initialize()
   const auto muted = appVolume->IsMuted();
   appVolume->SetHardwareVolume(level);
   CServiceBroker::GetActiveAE()->SetMute(muted);
+  if(CServiceBroker::GetActiveAE(true)) CServiceBroker::GetActiveAE(true)->SetMute(muted);
 
 #if defined(HAS_DVD_DRIVE) && !defined(TARGET_WINDOWS) // somehow this throws an "unresolved external symbol" on win32
   // turn off cdio logging
@@ -1628,6 +1632,16 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
                   __FUNCTION__);
       }
     }
+    IAE *audioengine2;
+    audioengine2 = CServiceBroker::GetActiveAE(true);
+    if (audioengine2)
+    {
+      if (!audioengine2->Suspend())
+      {
+        CLog::Log(LOGINFO, "{}: Failed to suspend AudioEngine2 before launching external program",
+                  __FUNCTION__);
+      }
+    }
 #if defined(TARGET_DARWIN)
     CLog::Log(LOGINFO, "ExecWait is not implemented on this platform");
 #elif defined(TARGET_POSIX)
@@ -1641,6 +1655,14 @@ void CApplication::OnApplicationMessage(ThreadMessage* pMsg)
       if (!audioengine->Resume())
       {
         CLog::Log(LOGFATAL, "{}: Failed to restart AudioEngine after return from external player",
+                  __FUNCTION__);
+      }
+    }
+    if (audioengine2)
+    {
+      if (!audioengine2->Resume())
+      {
+        CLog::Log(LOGFATAL, "{}: Failed to restart AudioEngine2 after return from external player",
                   __FUNCTION__);
       }
     }
@@ -2176,6 +2198,11 @@ bool CApplication::Stop(int exitCode)
     CServiceBroker::UnregisterAE();
     m_pActiveAE->Shutdown();
     m_pActiveAE.reset();
+    if(m_pActiveAE2)
+    {
+      m_pActiveAE2->Shutdown();
+      m_pActiveAE2.reset();
+    }
 
     CLog::Log(LOGINFO, "Application stopped");
   }

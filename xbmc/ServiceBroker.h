@@ -181,8 +181,8 @@ public:
   static CWinSystemBase* GetWinSystem();
   static CRenderSystemBase* GetRenderSystem();
 
-  static IAE* GetActiveAE();
-  static void RegisterAE(IAE* ae);
+  static IAE* GetActiveAE(bool bAudio2 = false);
+  static void RegisterAE(IAE *ae, IAE *ae2);
   static void UnregisterAE();
 
   static std::shared_ptr<CAppInboundProtocol> GetAppPort();
@@ -226,6 +226,7 @@ private:
   CGUIComponent* m_pGUI;
   CWinSystemBase* m_pWinSystem;
   IAE* m_pActiveAE;
+  IAE* m_pActiveAE2;
   std::shared_ptr<CAppInboundProtocol> m_pAppPort;
   std::shared_ptr<CSettingsComponent> m_pSettingsComponent;
   CDecoderFilterManager* m_decoderFilterManager;
